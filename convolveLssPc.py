@@ -45,7 +45,7 @@ def main(z=1.0, alpha=0.83,nMu=1000):
     plt.yscale('log')
     plt.ylim(0.05,40)
     plt.xlim(0.,0.6)
-
+    plt.show()
 
 def getTurboGL():
 
@@ -177,3 +177,8 @@ def get_dMuPrime():
     mag, pdf = getTurboGL()
 
     return (mag[1]-mag[0])
+
+
+
+if __name__ == '__main__':
+    main()
