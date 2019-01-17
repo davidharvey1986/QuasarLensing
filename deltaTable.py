@@ -4,7 +4,6 @@ When creating the PDFs for the PBH it takes a while to get the right deltas
 so i need a table outlining expected mean mag for a given delta.
 
 '''
-import ipdb as pdb
 
 import probabilityMagnification as pm
 import pickle as pkl

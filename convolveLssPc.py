@@ -5,7 +5,6 @@ Pc from probablitymagnification
 import probabilityMagnification as pm
 import numpy as np
 from matplotlib import pyplot as plt
-import ipdb as pdb
 import deltaTable as dt
 import os as os
 import pickle as pkl

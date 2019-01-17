@@ -4,13 +4,13 @@ Calculate the probaility of a point source being magnified
 '''
 from matplotlib import pyplot as plt
 import numpy as np
-import ipdb as pdb
 from matplotlib import colors as colors
 import matplotlib.cm as cmx
 from matplotlib import rc
 import lensing as lensing
 from cosmolopy import distance as dist
 import deltaTable as dt
+
 def getMeanMagOld( z ):
     cosmo = {'omega_M_0' : 0.3, 'omega_lambda_0' : 0.7, 'h' : 0.7}
     cosmo = dist.set_omega_k_0(cosmo)
@@ -224,8 +224,6 @@ def plotPBHpdf():
 
 
 def getMeanMag( z, dz=1e-4):
-
-
     cosmo = {'omega_M_0' : 0.31, 'omega_lambda_0' : 0.69, 'h' : 0.67}
     cosmo = dist.set_omega_k_0(cosmo)
     distanceEB = 0
