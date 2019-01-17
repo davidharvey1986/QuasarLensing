@@ -7,19 +7,9 @@ import numpy as np
 from matplotlib import colors as colors
 import matplotlib.cm as cmx
 from matplotlib import rc
-import lensing as lensing
 from cosmolopy import distance as dist
-import deltaTable as dt
+import deltaTable as dt    
 
-def getMeanMagOld( z ):
-    cosmo = {'omega_M_0' : 0.3, 'omega_lambda_0' : 0.7, 'h' : 0.7}
-    cosmo = dist.set_omega_k_0(cosmo)
-    
-    return (emptyAngDistance(z)/lensing.ang_distance(z))**2-1.
-
-    
-
-    
 def getMeanMagOther(z, omegaM=0.31):
 
     '''
