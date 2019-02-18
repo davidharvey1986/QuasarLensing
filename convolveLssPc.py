@@ -21,30 +21,30 @@ def main(z=1.0, alpha=0.83,nMu=1000):
         pkl.dump( [ magConvolve, pdfConvolve], open( pklFile, 'wb'))
 
 
-    meanMag = pm.getMeanMag( z)
+    meanMag = pm.getMeanMag( z )
     dMag = magConvolve[1] - magConvolve[0]
     #pdfConvolve /= np.sum(pdfConvolve)*dMag
 
     #TOTAL PDF
-    plt.plot(np.append(0.,magConvolve), np.append(1e-3,pdfConvolve))
+    plt.plot(np.append(0.,magConvolve)-meanMag, np.append(1e-3,pdfConvolve))
 
     #LSS PDF
     magLSS, pdfLSS = getTurboGL()
-    plt.plot(magLSS+meanMag, pdfLSS, '--')
+    plt.plot(magLSS, pdfLSS, '--')
 
     #PBH PDF
     delta = dt.getDelta(z)
     magPBH, pdfPBH =  pm.magPDF( delta )
-    plt.plot(np.append(0.,magPBH), np.append(1e-5,pdfPBH), ':')
+    plt.plot(np.append(0.,magPBH)-meanMag, np.append(1e-5,pdfPBH), ':')
 
     
     dMag = magPBH[1]-magPBH[0]
     print np.sum(magPBH*pdfPBH*dMag), meanMag
     
     plt.yscale('log')
-    plt.ylim(0.05,40)
+    plt.ylim(0.05,35)
     plt.xlim(0.,0.6)
-    plt.show()
+    #plt.show()
 
 def getTurboGL():
 
@@ -74,7 +74,7 @@ def getPBHpdf( z, dMag ):
 
 def convolutionPl( mu, alpha, z, pdfMags, MeanMagnitudes, PDFarray ):
     
-    P_L = 1e-5
+   
     endInt = mu / (1.-alpha)
     endInt = np.min([endInt,10.])
 
@@ -85,7 +85,7 @@ def convolutionPl( mu, alpha, z, pdfMags, MeanMagnitudes, PDFarray ):
     meanMag = pm.getMeanMag(z)
 
 
-    MuPrimeList = np.arange(0., endInt, dMuPrime)
+    MuPrimeList = np.arange(0., endInt, dMuPrime) 
 
   
       

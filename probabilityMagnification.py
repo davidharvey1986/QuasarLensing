@@ -214,17 +214,19 @@ def plotPBHpdf():
 
 
 def getMeanMag( z, dz=1e-4):
-    cosmo = {'omega_M_0' : 0.31, 'omega_lambda_0' : 0.69, 'h' : 0.67}
+    #return 0.1311
+    cosmo = {'omega_M_0' : 0.3086, 'omega_lambda_0' : 0.6914, 'h' : 0.6777}
     cosmo = dist.set_omega_k_0(cosmo)
     distanceEB = 0
     distanceFB = 0
     for i in np.arange(0.,z,dz):
-        dist_hz = 1./dist.hubble_z(i, **cosmo)
+        dist_hz = dist.hubble_distance_z(i, **cosmo)
 
         distanceEB += dz*dist_hz/(1+i)**2
 
         distanceFB += dz*dist_hz
 
     distanceFB /= 1.+z
+
     return  (distanceEB/distanceFB)**2-1.
         

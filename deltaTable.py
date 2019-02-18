@@ -9,9 +9,6 @@ import probabilityMagnification as pm
 import pickle as pkl
 import numpy as np
 
-
-
-
 def deltaTable():
 
     deltaList = np.linspace(0.,10.,100000)
