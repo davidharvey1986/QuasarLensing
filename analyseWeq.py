@@ -2,30 +2,40 @@ from matplotlib import pyplot as plt
 import numpy as np
 import pyfits as fits
 import lensing as lensing
+from emissionLine import *
 
 
-
-def OIIIwithMGII( catalogue='dr9_weq.fits' ):
-    shen = fits.open(catalogue)[1].data
-    ax = plt.gca()
-    index = (shen['REW_MGII']>0) & \
-      (shen['REW_MGII']<1e3) & \
-      (shen['REW_OIII_5007']>0) & \
-      (shen['REW_OIII_5007']<1e3)
+def OIIIwithMGII(  ):
+    '''
+    A script to analyse and bin the OIII and the MgIII lines 
+    
+    '''
 
 
-    zBin, weqBin = \
-      redshiftBinWeq( shen['Z_PIPE'][index], \
-                          shen['REW_MGII'][index])
-    ax.errorbar(zBin, weqBin[0,:], \
-                        yerr=weqBin[1,:], label='MGII')
-    zBin, weqBin = \
-      redshiftBinWeq( shen['Z_PIPE'][index], \
-                          shen['REW_OIII_5007'][index])
+    emissionLineList = ['MGII','OIII_5007','NARROW_HB']
+    fig, axarr = plt.subplots(len(emissionLineList),1)
 
-    ax.errorbar(zBin, weqBin[0,:], \
-                    yerr=weqBin[1,:], label='OIII')
-    ax.legend()
+    nEquivilentWidthBins = 30
+    maxEquivilentWidth = np.array([100., 50., 20.])
+    for iAxis, iEmissionLine in enumerate(emissionLineList):
+        emissionLineCl = emissionLine(iEmissionLine, nRedshiftBins=2)
+        emissionLineCl.getEquvilentWidthMeansAsFunctionOfRedshift()
+        EquivilentWidthBins = np.linspace(0., maxEquivilentWidth[iAxis], nEquivilentWidthBins)
+        emissionLineCl.cumulativeDistributionEquivalentWidth()
+        
+        redshiftList = emissionLineCl.equivilentWidthCumSum.keys()
+        redshiftListSorted = list((np.sort(np.array(redshiftList).astype(float))).astype(str))
+        for i in redshiftListSorted:
+
+            axarr[iAxis].plot(emissionLineCl.equivilentWidthCumSum[i]['x'], \
+                emissionLineCl.equivilentWidthCumSum[i]['y'], \
+                      label=i)
+                      
+
+        axarr[iAxis].legend()
+        axarr[iAxis].set_xlim(0,maxEquivilentWidth[iAxis])
+    plt.show()
+
 def main( catalogue='dr9_weq.fits' ):
     '''
     Analyse the dr9 boss quasar catalogue from 
@@ -58,35 +68,7 @@ def main( catalogue='dr9_weq.fits' ):
     ax.set_xlabel(r'z')
     ax.set_ylabel(r'\Delta\mu')
 
-def redshiftBinWeq( x, y, nBins=5 ):
-    '''
-    bin up the equviliant width
-    in to redshift
-    '''
 
-    #First remove all the zeros
-
-    xCut = x[(y>0) & (y<1e2)]
-    yCut = y[(y>0) & (y<1e2)]
-
-    bins = np.linspace(0., 1., nBins+1)
-
-    MeanWeq = np.zeros((2, nBins))
-    for iBin in xrange(nBins):
-        inBin = (xCut>bins[iBin]) & (xCut<bins[iBin+1])
-
-        
-        MeanWeq[0, iBin] = np.mean(yCut[inBin])
-
-        MeanWeq[1, iBin] = np.std(yCut[inBin])/np.sqrt(len(yCut[inBin]))
-
-    centres = (bins[1:] + bins[:-1])/2.
-
-    MeanWeq /= MeanWeq[0,0]
-    
-    return centres, MeanWeq
-
-        
         
     
 
