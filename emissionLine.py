@@ -1,5 +1,6 @@
 import numpy as np
 import pyfits as fits
+import convolveLssPc as clp
 
 
 class emissionLine:
@@ -177,4 +178,79 @@ class emissionLine:
 
         
             
+        
+    def getIntrinsicDistribution( self, redshiftCut=0.3 ):
+        '''
+        In the lensing paper they assume that the PDF of the
+        lensed supernova is a Gaussian with a sigma of 0.15
+        
+        In quasars we do not have the same luxury. 
+        So to get the 'intrinsic distribution' i will use the
+        low redshift quasars ( z<redshiftCut )
+
+        
+
+        Note that to do this the dEquivalentWidth (increment in EW)
+        must be the same as the lensing probability distribution
+        that we will use to convovlve it with
+
+        Therefore the bins should be preset
+        
+        '''
+
+        self.dEquivalentWidth = clp.get_dMuPrime()
+
+        #this might not work as the data is not well sampled enough
+        #i might need to bin it coarse and simply sub-sample it into smaller bins
+        #
+        equivalentWidthBins = np.arange(0., np.max(self.intrinsicEquivalentWidths),\
+                                       self.dEquivalentWidth)     
+
+        
+        self.intrinsicEquivalentWidths = \
+          self.restFrameEquivilentWidth[ self.redshift < redshiftCut ]
+
+        y, x = np.histogram( self.intrinsicEquivalentWidths, \
+                                 bins=equivalentWidthBins)
+            
+        self.intrinsicEquivalentWidthDistribution = \
+          {'y':y, 'x':equivalentWidthBins}
+
+
+    def getLensingProbability( self, z=1.0, alpha=0.83 ):
+        '''
+        I need to the probability distrubtion that a quasar
+        of redshift z is magnified or demagnified by large scale
+        structure and primordial black holes. Where the fraction
+        of dark matter in primordial black holes is alpha
+
+        z: Quasar Redshift
+        alpha: fraction of dark matter is primordial black holes
+
+        NOTES: for now i will use a given redshift of 1. and alpha=0.27
+        this will need to be changed such that i can iterate and fit
+
+        '''
+        
+        magnitude, lensingPDF  = \
+          main(z=z, alpha=alpha,nMu=1000)
+
+        self.lensingMagnitude = magnitude
+        self.lensingPDF = lensingPDF
+
+    def convolveIntrinsicEquivalentWidthWithLensingProbability(self):
+        '''
+        In order to get an estimate of the expected distribution of 
+        equivalent widths i need to take the intrinsic distrubotion
+        and convole it with the lensing PDF
+
+        NOTE: Currently the lensing pronbability is in terms of magnitudes
+        this will change once we have it in terms of Equivalent widhts
+        
+        '''
+
+        self.predictedLensedEquivalentWidth =\
+          np.convolve( self.intrinsicEquivalentWidthDistribution, \
+                                self.lensingPDF)
+        
         
