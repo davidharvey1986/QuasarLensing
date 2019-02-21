@@ -18,17 +18,19 @@ def exampleEquivalentWidthConvolutedWithLensingAndCompared():
     '''
     #initiate the class
     emissionLineCl = emissionLine('NARROW_HB', nRedshiftBins=2)
-    #get what i am calling the intrinsic distribution of HB narrow EQ
-    #this can be discussed.the redshift cut determines thoise quasars
-    #that havent been lensed, but still need enough quasars to get a good
-    #distribution
-    emissionLineCl.getIntrinsicDistribution( redshiftCut=0.3 )
 
     #get the lensing probability from convolvelssPc.
     #currently only for z=1., and alpha=0.83
     #future models will sample these two paraemeters to find
     #the best fitting for the observed tomorgraphic sampels
     emissionLineCl.getLensingProbability( z=1.0, alpha=0.83 )
+
+    #get what i am calling the intrinsic distribution of HB narrow EQ
+    #this can be discussed.the redshift cut determines thoise quasars
+    #that havent been lensed, but still need enough quasars to get a good
+    #distribution
+    emissionLineCl.getIntrinsicDistribution( redshiftCut=0.3 )
+
 
     #now convolve the the two together to get the expected
     #distribtuion of EW at a redshift of 1.0 given an intrinsic
@@ -37,11 +39,15 @@ def exampleEquivalentWidthConvolutedWithLensingAndCompared():
 
     #plot the initial distrubtion
     plt.plot(emissionLineCl.intrinsicEquivalentWidthDistribution['x'],\
-                 emissionLineCl.intrinsicEquivalentWidthDistribution['y'], 'b')
+                 emissionLineCl.intrinsicEquivalentWidthDistribution['y'], 'b', label='Intrinsic Dist')
                  
     #plot the resulting convolution
     plt.plot(emissionLineCl.predictedLensedEquivalentWidthDistribution['x'],\
-                 emissionLineCl.predictedLensedEquivalentWidthDistribution['y'],'r')
+                 emissionLineCl.predictedLensedEquivalentWidthDistribution['y'],'r',label='Predicted Dist')
+
+
+
+
     plt.show()
     
     

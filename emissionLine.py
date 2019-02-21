@@ -1,8 +1,8 @@
 import numpy as np
 import pyfits as fits
 import convolveLssPc as clp
-
-
+import ipdb as pdb
+from scipy.stats import norm
 class emissionLine:
     '''
     log the all the data from the shen catalopgues
@@ -179,7 +179,7 @@ class emissionLine:
         
             
         
-    def getIntrinsicDistribution( self, redshiftCut=0.3 ):
+    def getIntrinsicDistribution( self, redshiftCut=0.3, mimicSuperNova=True ):
         '''
         In the lensing paper they assume that the PDF of the
         lensed supernova is a Gaussian with a sigma of 0.15
@@ -195,19 +195,44 @@ class emissionLine:
         that we will use to convovlve it with
 
         Therefore the bins should be preset
+
+        mimicSuperNova : Instead of using the raw data of quasar distribtion
+           mimic the distributions from the supenova papers, and 
+           therefor a Gauassian with a variance=0.15
         
         '''
 
-        self.dEquivalentWidth = clp.get_dMuPrime()
+        
         self.intrinsicEquivalentWidths = \
           self.restFrameEquivilentWidth[ self.redshift < redshiftCut ]
+          
+        #so i will bin the EW in multiples of the dEquivalentWidth
+        #the supersample it such that it has the same dEquivalentWidth
+        #as the lensing PDF
+        nSubSample = 1.
+        
+        SubSampledResolution = self.dEquivalentWidth*nSubSample
+        
+        if mimicSuperNova:
+            #This is purely for test purposes
+            x = np.arange(-1.0,1.0, SubSampledResolution)
+            y = norm.pdf(x, 0., 0.15)
+            self.intrinsicEquivalentWidthDistribution = \
+              {'y':y, 'x':x}
+            return
+        else:
+            equivalentWidthBins = np.arange(0.,np.max(self.intrinsicEquivalentWidths), \
+                                                SubSampledResolution)
+            
         #this might not work as the data is not well sampled enough
         #i might need to bin it coarse and simply sub-sample it into smaller bins
-        #TO DO: I NEED TO DO THIS!
-        equivalentWidthBins = np.arange(0., np.max(self.intrinsicEquivalentWidths),\
-                                       self.dEquivalentWidth)     
 
 
+        
+        
+        self.nEquivalentWidthBins = len(equivalentWidthBins)
+        print("Intrinsic Equivalent Width sampled at %0.3f\n" % SubSampledResolution)
+        
         #need to confirm what i am doing here is correct.
         #does it all need to be the same dEW
         
@@ -215,13 +240,23 @@ class emissionLine:
           np.append(equivalentWidthBins, equivalentWidthBins[-1]+self.dEquivalentWidth)
         
 
-
+        print len(equivalentWidthBins)
+        
         y, x = np.histogram( self.intrinsicEquivalentWidths, \
-                                 bins=equivalentWidthBins, density=True)
-                                 
-        xc = (x[:-1]+x[1:])/2.
+                                 bins=equivalentWidthBins, \
+                                 density=True)
+        
+        #So the histogram is currently not as the same sample as the
+        #lensign pdf, so need to superSample by the nSubSample rate.
+        ySuperSample = np.repeat(y, nSubSample)
+        xSuperSample = np.arange(x[0]+self.dEquivalentWidth/2.,  \
+                                self.dEquivalentWidth*len(ySuperSample)+x[0], \
+                                self.dEquivalentWidth)
+        
+
+        
         self.intrinsicEquivalentWidthDistribution = \
-          {'y':y, 'x':xc}
+          {'y':ySuperSample, 'x':xSuperSample}
 
 
     def getLensingProbability( self, z=1.0, alpha=0.83 ):
@@ -242,6 +277,9 @@ class emissionLine:
         magnitude, lensingPDF  = \
           clp.totalPl(z=z, alpha=alpha,nMu=1000)
 
+        #force some kind of normalisation, although this should alrady be normalised
+        lensingPDF /= np.sum(lensingPDF)*(magnitude[1]-magnitude[0])
+        self.dEquivalentWidth = (magnitude[1]-magnitude[0])
         self.lensingMagnitude = magnitude
         self.lensingPDF = lensingPDF
 
@@ -257,17 +295,21 @@ class emissionLine:
         '''
 
         convolvePDF =\
-          np.convolve( self.intrinsicEquivalentWidthDistribution['y'], \
-                                self.lensingPDF)
+          np.convolve( self.lensingPDF, self.intrinsicEquivalentWidthDistribution['y'],  'full'  )
 
-        middleIndex = np.int(np.ceil(len(self.intrinsicEquivalentWidths)/2.))
-        magnitudeMiddleValue = self.lensingMagnitude[middleIndex]
 
-                  
+        maxNumber = np.max( [ len(self.lensingPDF), len(self.intrinsicEquivalentWidthDistribution['y'])])
+        #so is the overlap where the convolved PDF would not be zero
+        #assuming that the lensingPDF is all nonzero
+        magnitudeMiddleValue = np.ceil(maxNumber/2.)*self.dEquivalentWidth
+
+        convolvePDF /= np.sum(convolvePDF)*self.dEquivalentWidth
+
         
+        newX = np.arange(len(convolvePDF))*self.dEquivalentWidth - magnitudeMiddleValue
+        
+
         self.predictedLensedEquivalentWidthDistribution = \
-          {'x':np.arange(0.,self.dEquivalentWidth*len(convolvePDF),\
-                             self.dEquivalentWidth) + magnitudeMiddleValue, \
-            'y': convolvePDF}
+          {'x':newX,  'y': convolvePDF}
                              
         
