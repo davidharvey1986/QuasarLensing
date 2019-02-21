@@ -199,22 +199,29 @@ class emissionLine:
         '''
 
         self.dEquivalentWidth = clp.get_dMuPrime()
-
+        self.intrinsicEquivalentWidths = \
+          self.restFrameEquivilentWidth[ self.redshift < redshiftCut ]
         #this might not work as the data is not well sampled enough
         #i might need to bin it coarse and simply sub-sample it into smaller bins
-        #
+        #TO DO: I NEED TO DO THIS!
         equivalentWidthBins = np.arange(0., np.max(self.intrinsicEquivalentWidths),\
                                        self.dEquivalentWidth)     
 
+
+        #need to confirm what i am doing here is correct.
+        #does it all need to be the same dEW
         
-        self.intrinsicEquivalentWidths = \
-          self.restFrameEquivilentWidth[ self.redshift < redshiftCut ]
+        equivalentWidthBins = \
+          np.append(equivalentWidthBins, equivalentWidthBins[-1]+self.dEquivalentWidth)
+        
+
 
         y, x = np.histogram( self.intrinsicEquivalentWidths, \
-                                 bins=equivalentWidthBins)
-            
+                                 bins=equivalentWidthBins, density=True)
+                                 
+        xc = (x[:-1]+x[1:])/2.
         self.intrinsicEquivalentWidthDistribution = \
-          {'y':y, 'x':equivalentWidthBins}
+          {'y':y, 'x':xc}
 
 
     def getLensingProbability( self, z=1.0, alpha=0.83 ):
@@ -233,7 +240,7 @@ class emissionLine:
         '''
         
         magnitude, lensingPDF  = \
-          main(z=z, alpha=alpha,nMu=1000)
+          clp.totalPl(z=z, alpha=alpha,nMu=1000)
 
         self.lensingMagnitude = magnitude
         self.lensingPDF = lensingPDF
@@ -249,8 +256,18 @@ class emissionLine:
         
         '''
 
-        self.predictedLensedEquivalentWidth =\
-          np.convolve( self.intrinsicEquivalentWidthDistribution, \
+        convolvePDF =\
+          np.convolve( self.intrinsicEquivalentWidthDistribution['y'], \
                                 self.lensingPDF)
+
+        middleIndex = np.int(np.ceil(len(self.intrinsicEquivalentWidths)/2.))
+        magnitudeMiddleValue = self.lensingMagnitude[middleIndex]
+
+                  
         
+        self.predictedLensedEquivalentWidthDistribution = \
+          {'x':np.arange(0.,self.dEquivalentWidth*len(convolvePDF),\
+                             self.dEquivalentWidth) + magnitudeMiddleValue, \
+            'y': convolvePDF}
+                             
         

@@ -35,9 +35,14 @@ def exampleEquivalentWidthConvolutedWithLensingAndCompared():
     #distribution of quasars
     emissionLineCl.convolveIntrinsicEquivalentWidthWithLensingProbability()
 
+    #plot the initial distrubtion
+    plt.plot(emissionLineCl.intrinsicEquivalentWidthDistribution['x'],\
+                 emissionLineCl.intrinsicEquivalentWidthDistribution['y'], 'b')
+                 
     #plot the resulting convolution
-    plt.plot(emissionLineCl.predictedLensedEquivalentWidth)
-    ptl.show()
+    plt.plot(emissionLineCl.predictedLensedEquivalentWidthDistribution['x'],\
+                 emissionLineCl.predictedLensedEquivalentWidthDistribution['y'],'r')
+    plt.show()
     
     
 

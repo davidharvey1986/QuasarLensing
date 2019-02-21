@@ -11,14 +11,10 @@ import pickle as pkl
 
 def main(z=1.0, alpha=0.83,nMu=1000):
 
-    pklFile = 'pickles/PL_%0.1f_%0.2f_%i.pkl' % (z,alpha,nMu)
     
-    if os.path.isfile( pklFile ):
-        magConvolve, pdfConvolve = \
-          pkl.load( open( pklFile, 'rb'))
-    else:
-        magConvolve, pdfConvolve = totalPl(z=z, nMu=nMu, alpha=alpha)
-        pkl.dump( [ magConvolve, pdfConvolve], open( pklFile, 'wb'))
+   
+    magConvolve, pdfConvolve = totalPl(z=z, nMu=nMu, alpha=alpha)
+
 
 
     meanMag = pm.getMeanMag( z )
@@ -154,6 +150,11 @@ def getPC( mu, muBar):
 
 
 def totalPl(z=1.0, nMu=100, alpha=0.):
+
+    pklFile = 'pickles/PL_%0.1f_%0.2f_%i.pkl' % (z,alpha,nMu)
+    if os.path.isfile( pklFile ):
+        return pkl.load( open( pklFile, 'rb'))
+
     meanMu = pm.getMeanMag( z )
     MuList = np.linspace(0., 1.0, nMu)[1:]
     P_l = np.zeros(nMu-1)
@@ -169,6 +170,7 @@ def totalPl(z=1.0, nMu=100, alpha=0.):
         P_l[i] = convolutionPl(  iMu, alpha, z, \
                     pdfMags, MeanMagnitudes, PDFarray )
 
+    pkl.dump( [ MuList, P_l], open( pklFile, 'wb'))
     return MuList, P_l
 
 
