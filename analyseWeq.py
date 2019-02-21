@@ -39,15 +39,18 @@ def exampleEquivalentWidthConvolutedWithLensingAndCompared():
 
     #plot the initial distrubtion
     plt.plot(emissionLineCl.intrinsicEquivalentWidthDistribution['x'],\
-                 emissionLineCl.intrinsicEquivalentWidthDistribution['y'], 'b', label='Intrinsic Dist')
+                 emissionLineCl.intrinsicEquivalentWidthDistribution['y'], 'b', label='Intrinsic Distribution')
                  
     #plot the resulting convolution
     plt.plot(emissionLineCl.predictedLensedEquivalentWidthDistribution['x'],\
-                 emissionLineCl.predictedLensedEquivalentWidthDistribution['y'],'r',label='Predicted Dist')
+                 emissionLineCl.predictedLensedEquivalentWidthDistribution['y'],'r',label=r'Predicted Distribution ($\alpha=0.83$)')
 
+    plt.legend(loc=2, prop={'size': 6})
 
+    plt.xlim(-0.7,0.7)
 
-
+    plt.xlabel(r'$\Delta$m')
+    plt.savefig('Figure2Bellido.pdf')
     plt.show()
     
     
