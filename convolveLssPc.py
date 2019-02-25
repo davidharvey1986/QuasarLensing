@@ -8,39 +8,13 @@ from matplotlib import pyplot as plt
 import deltaTable as dt
 import os as os
 import pickle as pkl
+import lensingProbabilityDistribution as lpd
 
 def main(z=1.0, alpha=0.83,nMu=1000):
 
-    
+    lensingPDF = lpd.lensingProbabilityDistribution( redshift=z, alpha=alpha, nMagnitudeBins=nMu)
    
-    magConvolve, pdfConvolve = totalPl(z=z, nMu=nMu, alpha=alpha)
 
-
-
-    meanMag = pm.getMeanMag( z )
-    dMag = magConvolve[1] - magConvolve[0]
-    #pdfConvolve /= np.sum(pdfConvolve)*dMag
-
-    #TOTAL PDF
-    plt.plot(np.append(0.,magConvolve)-meanMag, np.append(1e-3,pdfConvolve))
-
-    #LSS PDF
-    magLSS, pdfLSS = getTurboGL()
-    plt.plot(magLSS, pdfLSS, '--')
-
-    #PBH PDF
-    delta = dt.getDelta(z)
-    magPBH, pdfPBH =  pm.magPDF( delta )
-    plt.plot(np.append(0.,magPBH)-meanMag, np.append(1e-5,pdfPBH), ':')
-
-    
-    dMag = magPBH[1]-magPBH[0]
-    print np.sum(magPBH*pdfPBH*dMag), meanMag
-    
-    plt.yscale('log')
-    plt.ylim(0.05,35)
-    plt.xlim(0.,0.6)
-    #plt.show()
 
 def getTurboGL():
 

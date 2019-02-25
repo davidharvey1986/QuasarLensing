@@ -3,6 +3,9 @@ import probabilityMagnification as pm
 import deltaTable as dt
 import sys
 from matplotlib import pyplot as plt
+import os
+import pickle as pkl
+import numpy as np
 
 class lensingProbabilityDistribution():
     '''
@@ -21,7 +24,7 @@ class lensingProbabilityDistribution():
     '''
 
     
-    def __init__( self, redshift=1.0, alpha=0., nMagnitudueBins=1000):
+    def __init__( self, redshift=1.0, alpha=0., nMagnitudeBins=1000):
         '''
         This distribution is a function of two parameters
         redshift : the redshift at which i want to calcuate the probability
@@ -35,27 +38,28 @@ class lensingProbabilityDistribution():
         self.delta = dt.getDelta(redshift)
         self.redshift = redshift
         self.alpha = alpha
-        self.nMagnitudeBins = nMagnitudBins
+        self.nMagnitudeBins = nMagnitudeBins
+        #to be changed to include redshift dependence:
+        self.getProbabilityLensingByLss()
         self.pickklFileName = \
-          'pickles/PL_%0.1f_%0.2f_%i.pkl' % (z,alpha,nMu)
+          'pickles/PL_%0.1f_%0.2f_%i.pkl' % (redshift,alpha,nMagnitudeBins)
 
-        self.getMeanMagnitudes()
-        
+        self.getMeanMagnitude()
+        self.getDmuPrime()
         self.checkPickleFileExists()
 
         if not self.boolPickleFileExists:
             self.convolvePbhPdfWithLssPdf()
 
-        self.plotTotalProbabilityDistribution()
 
         
-    def chekPickleFileExists( self ):
+    def checkPickleFileExists( self ):
         if os.path.isfile( self.pickklFileName ):
             
             totalMagnitude, totalProbability = \
             pkl.load( open( self.pickklFileName, 'rb'))
 
-            self.totalProbabilityDistribution = \
+            self.convolvedPbhPdfWithLssPdf = \
             {'x':totalMagnitude, 'y':totalProbability}
 
         self.boolPickleFileExists =\
@@ -82,20 +86,20 @@ class lensingProbabilityDistribution():
         '''
         self.makeArrayOfPbhProbabilityDistributions()
         
-        self.convolvedProbabilityDistribution = \
-           np.zeros(nMu-1)
+        self.convolvedPbhPdfWithLssPdf = \
+           np.zeros(self.nMagnitudeBins-1)
            
         self.totalLensingPDFmagnitudes = \
           np.linspace(0., 1.0, self.nMagnitudeBins)[1:]
           
         for howFarThroughList, givenMagnitude \
           in enumerate(self.totalLensingPDFmagnitudes):
-            self.reportProgress()
+            self.reportProgress(howFarThroughList)
             self.convolveLssWithPbhForGivenMagnitude( givenMagnitude )
-
-       self.totalProbabilityDistribution = \
+            
+        self.totalProbabilityDistribution = \
           {'x':self.totalLensingPDFmagnitudes, \
-               'y':self.convolvedProbabilityDistribution}
+               'y':self.convolvedPbhPdfWithLssPdf}
 
     def reportProgress( self, progress):
         sys.stdout.write("%i/%i" %(progress, self.nMagnitudeBins-1))
@@ -110,8 +114,6 @@ class lensingProbabilityDistribution():
         #dMuPrime = endInt/nInt
         #dMuPrime should be the P_LSS one as this defines min
         #Does this need to be changed?
-        self.get_dMuPrime()
-        
         MuPrimeList = np.arange(0., endInt,  self.dMuPrime) 
      
         self.probabilityLensedByCompactObject =  \
@@ -121,11 +123,11 @@ class lensingProbabilityDistribution():
 
 
                                   
-        self.getPLSS(MuPrimeList)
+        self.getProbabilityLensingByLssForGivenMagnitude(MuPrimeList)
                                 
         
         self.dP_L = self.dMuPrime*\
-          self.probabilityLensedByLss*\
+          self.probabilityLensingByLssForGivenMagnitude*\
           self.probabilityLensedByCompactObject
     
     
@@ -136,64 +138,65 @@ class lensingProbabilityDistribution():
         self.convolvedProbabilityDistribution[ index ] = \
           totalProbabilityForGivenMagnitude
 
-    def get_dMuPrime(self):
-        mag, pdf = getTurboGL()
-        self.dMuPrime = (mag[1]-mag[0])
+    def getDmuPrime(self):
+        self.getProbabilityLensingByLss()
+        self.dMuPrime = self.probabilityLensingByLss['x'][1]-\
+                    self.probabilityLensingByLss['x'][0]
 
 
 
-    def getTurboGL(self):
+    def getProbabilityLensingByLss(self):
 
 
         TurboGLfile = 'TurboGL.dat'
         magnitudes, PDF = np.loadtxt(TurboGLfile, unpack=True)
 
-        self.probabilityLensingLss = \
+        self.probabilityLensingByLss = \
           {'x':magnitudes, 'y':PDF}
 
     
-    def getProbabilityLensingByLss( mu ):
+    def getProbabilityLensingByLssForGivenMagnitude( self, mu ):
         
-        self.getTurboGL()
 
-
-        pdfMagsMatrix = np.matrix(probabilityLensingLss['x']).T*\
+        pdfMagsMatrix = np.matrix(self.probabilityLensingLss['x']).T*\
           np.matrix(np.ones(len(mu)))
         
         pdfMagsIndex = \
-          np.argmin(np.abs((probabilityLensingLss['y'] - np.matrix(mu))),\
+          np.argmin(np.abs((self.probabilityLensingLss['y'] - \
+                                np.matrix(mu))),\
                         axis=0)
     
-        correspondingMag = probabilityLensingLss['x'][pdfMagsIndex]
+        correspondingMag = self.probabilityLensingLss['x'][pdfMagsIndex]
         
         returnPDF = pdf[pdfMagsIndex]
         returnPDF[ correspondingMag-mu > 2.*(mag[1]-mag[0])] = 0.
     
-        self.probabilityLensingByLss = returnPDF
+        self.probabilityLensingByLssForGivenMagnitude = returnPDF
         
     
 
 
-    def plotTotalProbabilityDistribution():
+    def plotTotalProbabilityDistribution(self):
         #TOTAL PDF
         plotMagnitudesAppendZero = \
-          np.append(0., self.totalProbabilityDistribution['x']) - \
-          self.meangMagnification
+          np.append(0., self.convolvedPbhPdfWithLssPdf['x']) - \
+          self.meanMagnification
         plotPdfAppendZero = \
-          np.append(1e-3,self.totalProbabilityDistribution['y'])
+          np.append(1e-3,self.convolvedPbhPdfWithLssPdf['y'])
           
         plt.plot(plotMagnitudesAppendZero, plotPdfAppendZero)
 
         #LSS PDF
-        plt.plot(self.probabilityLensingLss['x'],\
-                     self.probabilityLensingLss['y'], '--')
+        plt.plot(self.probabilityLensingByLss['x'],\
+                     self.probabilityLensingByLss['y'], '--')
         
         #PBH PDF
         magPBH, pdfPBH =  pm.magPDF( self.delta )
-        plt.plot(np.append(0.,magPBH)-meanMag, np.append(1e-5,pdfPBH), ':')
+        plt.plot(np.append(0.,magPBH)-self.meanMagnification, \
+                     np.append(1e-5,pdfPBH), ':')
         
 
         plt.yscale('log')
         plt.ylim(0.05,35)
         plt.xlim(0.,0.6)
-        #plt.show()
+        plt.show()

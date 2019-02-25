@@ -67,7 +67,7 @@ def generatePDFs():
         
 
         
-def getPdfPBH( Magnitudes, MeanMags, pdfMagsDict, MeanMagnitudes, PDFarray):
+def getPdfPBH( Magnitudes, MeanMags, pdfMagsDict):
 
     #This generates a 2x2 array of mea
     pdfMags = pdfMagsDict['pdfMagnitudes']
