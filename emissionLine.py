@@ -1,7 +1,6 @@
 import numpy as np
 import pyfits as fits
 import convolveLssPc as clp
-import ipdb as pdb
 from scipy.stats import norm
 
 
@@ -277,7 +276,7 @@ class emissionLine:
         '''
         #TO DO This needs to be checked this funcion.
         magnitude, lensingPDF  = \
-          clp.totalPl(z=z, alpha=alpha,nMu=1000)
+          clp.main(z=z, alpha=alpha,nMu=1000)
 
         #force some kind of normalisation, although this should alrady be normalised
         lensingPDF /= np.sum(lensingPDF)*(magnitude[1]-magnitude[0])

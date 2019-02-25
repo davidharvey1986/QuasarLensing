@@ -23,7 +23,7 @@ def exampleEquivalentWidthConvolutedWithLensingAndCompared():
     #currently only for z=1., and alpha=0.83
     #future models will sample these two paraemeters to find
     #the best fitting for the observed tomorgraphic sampels
-    emissionLineCl.getLensingProbability( z=1.0, alpha=0.83 )
+    emissionLineCl.getLensingProbability( z=1.0, alpha=0. )
 
     #get what i am calling the intrinsic distribution of HB narrow EQ
     #this can be discussed.the redshift cut determines thoise quasars

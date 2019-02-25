@@ -7,6 +7,8 @@ import os
 import pickle as pkl
 import numpy as np
 import ipdb as pdb
+
+
 class lensingProbabilityDistribution():
     '''
     This class contains the functions that will take an output 
@@ -54,7 +56,13 @@ class lensingProbabilityDistribution():
 
             self.writeToPickleFile()
 
-        
+        self.getConvolvedPbhPdfWithLssPdf()
+            
+
+    def getConvolvedPbhPdfWithLssPdf( self ):
+        return self.convolvedPbhPdfWithLssPdf['x'], \
+          self.convolvedPbhPdfWithLssPdf['y']
+          
     def checkPickleFileExists( self ):
         '''
         See if the data file for this PDF exists.
@@ -185,8 +193,8 @@ class lensingProbabilityDistribution():
         '''
         
         self.getProbabilityLensingByLss()
-        self.dMuPrime = self.probabilityLensingByLss['x'][1]-\
-                    self.probabilityLensingByLss['x'][0]
+        self.dMuPrime = (self.probabilityLensingByLss['x'][1]-\
+                    self.probabilityLensingByLss['x'][0])/4.
 
 
 
@@ -235,7 +243,7 @@ class lensingProbabilityDistribution():
     
 
 
-    def plotTotalProbabilityDistribution(self):
+    def plotTotalProbabilityDistribution(self, show=False):
         '''
         Plot the total convovled PDF
         Plot the LSS PDF
@@ -243,13 +251,7 @@ class lensingProbabilityDistribution():
         '''
         
         #TOTAL PDF
-        plotMagnitudesAppendZero = \
-          np.append(0., self.convolvedPbhPdfWithLssPdf['x']) - \
-          self.meanMagnification
-        plotPdfAppendZero = \
-          np.append(1e-3,self.convolvedPbhPdfWithLssPdf['y'])
-          
-        plt.plot(plotMagnitudesAppendZero, plotPdfAppendZero)
+        plt.plot(self.convolvedPbhPdfWithLssPdf['x'], self.convolvedPbhPdfWithLssPdf['y'])
 
         #LSS PDF
         plt.plot(self.probabilityLensingByLss['x'],\
@@ -257,14 +259,15 @@ class lensingProbabilityDistribution():
         
         #PBH PDF
         magPBH, pdfPBH =  pm.magPDF( self.delta )
-        plt.plot(np.append(0.,magPBH)-self.meanMagnification, \
+        plt.plot(np.append(0.,magPBH), \
                      np.append(1e-5,pdfPBH), ':')
         
 
         plt.yscale('log')
         plt.ylim(0.05,35)
         plt.xlim(0.,0.6)
-        plt.show()
+        if show:
+            plt.show()
 
 
     def writeToPickleFile( self ):
