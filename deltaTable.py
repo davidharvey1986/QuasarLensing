@@ -67,10 +67,12 @@ def generatePDFs():
         
 
         
-def getPdfPBH( Magnitudes, MeanMags, pdfMags, MeanMagnitudes, PDFarray):
+def getPdfPBH( Magnitudes, MeanMags, pdfMagsDict, MeanMagnitudes, PDFarray):
 
     #This generates a 2x2 array of mea
-
+    pdfMags = pdfMagsDict['pdfMagnitudes']
+    MeanMagnitudes = pdfMagsDict['meanMagnitudes']
+    PDFarray = pdfMagsDict['pdfDistributionArray']
 
     pdfMagsMatrix = np.matrix(pdfMags).T*np.matrix(np.ones(len(Magnitudes)))
 

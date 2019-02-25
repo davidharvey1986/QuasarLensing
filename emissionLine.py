@@ -3,6 +3,8 @@ import pyfits as fits
 import convolveLssPc as clp
 import ipdb as pdb
 from scipy.stats import norm
+
+
 class emissionLine:
     '''
     log the all the data from the shen catalopgues
@@ -179,7 +181,7 @@ class emissionLine:
         
             
         
-    def getIntrinsicDistribution( self, redshiftCut=0.3, mimicSuperNova=True ):
+    def getIntrinsicDistribution( self, redshiftCut=0.3, mimicSuperNova=True):
         '''
         In the lensing paper they assume that the PDF of the
         lensed supernova is a Gaussian with a sigma of 0.15
@@ -273,7 +275,7 @@ class emissionLine:
         this will need to be changed such that i can iterate and fit
 
         '''
-        
+        #TO DO This needs to be checked this funcion.
         magnitude, lensingPDF  = \
           clp.totalPl(z=z, alpha=alpha,nMu=1000)
 
