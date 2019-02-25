@@ -12,10 +12,12 @@ import lensingProbabilityDistribution as lpd
 
 def main(z=1.0, alpha=0.83,nMu=1000):
 
-    lensingPDF = lpd.lensingProbabilityDistribution( redshift=z, alpha=alpha, nMagnitudeBins=nMu)
-   
+    lensingPDF = \
+      lpd.lensingProbabilityDistribution( redshift=z, alpha=alpha, nMagnitudeBins=nMu)
+    
 
-
+    lensingPDF.plotTotalProbabilityDistribution()
+    print lensingPDF.convolvedPbhPdfWithLssPdf['y']
 def getTurboGL():
 
 
@@ -54,30 +56,31 @@ def convolutionPl( mu, alpha, z, pdfMags, MeanMagnitudes, PDFarray ):
     dMuPrime = get_dMuPrime()
     meanMag = pm.getMeanMag(z)
 
-
     MuPrimeList = np.arange(0., endInt, dMuPrime) 
 
-  
+
+    inputPdfPBH = \
+      {    'pdfMagnitudes':pdfMags, \
+        'meanMagnitudes':MeanMagnitudes, \
+      'pdfDistributionArray':PDFarray}
       
     P_C =  dt.getPdfPBH(  mu - MuPrimeList*(1.-alpha), \
                                   alpha*MuPrimeList,\
-                                  pdfMags, \
-                                  MeanMagnitudes, \
-                                  PDFarray)
+                                  inputPdfPBH)
 
 
 
     P_LSS = getPLSS_New(MuPrimeList-meanMag, z)
         
     dP_L = dMuPrime*P_LSS*P_C
-    
+
     
     P_L = np.sum(dP_L)
 
     return P_L
 
 def getPLSS_New( mu, z):
-
+    print mu
     mag, pdf = getTurboGL()
 
 
@@ -123,11 +126,11 @@ def getPC( mu, muBar):
 
 
 
-def totalPl(z=1.0, nMu=100, alpha=0.):
+def totalPl(z=1.0, nMu=100, alpha=0.83):
 
-    pklFile = 'pickles/PL_%0.1f_%0.2f_%i.pkl' % (z,alpha,nMu)
-    if os.path.isfile( pklFile ):
-        return pkl.load( open( pklFile, 'rb'))
+    #pklFile = 'pickles/PL_%0.1f_%0.2f_%i.pkl' % (z,alpha,nMu)
+    #if os.path.isfile( pklFile ):
+    #    return pkl.load( open( pklFile, 'rb'))
 
     meanMu = pm.getMeanMag( z )
     MuList = np.linspace(0., 1.0, nMu)[1:]
@@ -137,14 +140,14 @@ def totalPl(z=1.0, nMu=100, alpha=0.):
     #PBH PDF array showing for P_C(mu|MeanMu)
     pdfMags, MeanMagnitudes, PDFarray = \
       dt.generatePDFs()
-
+    
     #The 
     for i, iMu in enumerate(MuList):
         print("%i/%i" %(i,nMu-1))
         P_l[i] = convolutionPl(  iMu, alpha, z, \
                     pdfMags, MeanMagnitudes, PDFarray )
 
-    pkl.dump( [ MuList, P_l], open( pklFile, 'wb'))
+    #pkl.dump( [ MuList, P_l], open( pklFile, 'wb'))
     return MuList, P_l
 
 
