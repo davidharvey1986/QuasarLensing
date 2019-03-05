@@ -16,39 +16,41 @@ def exampleEquivalentWidthConvolutedWithLensingAndCompared():
 
     Lots of to dos noted in the emissionLine class
     '''
-    #initiate the class
-    emissionLineCl = emissionLine('NARROW_HB', nRedshiftBins=2)
 
     #get the lensing probability from convolvelssPc.
     #currently only for z=1., and alpha=0.83
     #future models will sample these two paraemeters to find
     #the best fitting for the observed tomorgraphic sampels
-    emissionLineCl.getLensingProbability( z=1.0, alpha=0. )
+    alphaList = [0.,0.3,0.5,0.83]
+    for i in alphaList:
+    #initiate the class
+        emissionLineCl = emissionLine('NARROW_HB', nRedshiftBins=2)
+
+        emissionLineCl.getLensingProbability( z=1.0, alpha=i )
 
     #get what i am calling the intrinsic distribution of HB narrow EQ
     #this can be discussed.the redshift cut determines thoise quasars
     #that havent been lensed, but still need enough quasars to get a good
     #distribution
-    emissionLineCl.getIntrinsicDistribution( redshiftCut=0.3 )
-
+        emissionLineCl.getIntrinsicDistribution( redshiftCut=0.3 )
+    
 
     #now convolve the the two together to get the expected
     #distribtuion of EW at a redshift of 1.0 given an intrinsic
     #distribution of quasars
-    emissionLineCl.convolveIntrinsicEquivalentWidthWithLensingProbability()
+        emissionLineCl.convolveIntrinsicEquivalentWidthWithLensingProbability()
 
-    #plot the initial distrubtion
-    plt.plot(emissionLineCl.intrinsicEquivalentWidthDistribution['x'],\
-                 emissionLineCl.intrinsicEquivalentWidthDistribution['y'], 'b', label='Intrinsic Distribution')
+
                  
     #plot the resulting convolution
-    plt.plot(emissionLineCl.predictedLensedEquivalentWidthDistribution['x'],\
-                 emissionLineCl.predictedLensedEquivalentWidthDistribution['y'],'r',label=r'Predicted Distribution ($\alpha=0.83$)')
-
+        plt.plot(emissionLineCl.lensingMagnitude,\
+                    emissionLineCl.lensingPDF, \
+                    label=r'$\alpha=%0.2f$' % i)
+        
     plt.legend(loc=2, prop={'size': 6})
 
     plt.xlim(-0.7,0.7)
-
+    plt.plot([0,0],[0,10],'--')
     plt.xlabel(r'$\Delta$m')
     plt.savefig('Figure2Bellido.pdf')
     plt.show()

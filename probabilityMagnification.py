@@ -54,7 +54,7 @@ def getDelta(z, meanMag=None):
     '''
     get the delta of the pdf in the normal version
     '''
-    deltaList = np.linspace(0.,2,10000)
+    deltaList = np.linspace(0.,2,1000)
     if meanMag is None:
         meanMag = getMeanMag( z )
 
@@ -92,7 +92,8 @@ def magPDF( delta, mag=None ):
 
     '''
     if mag is None:
-        mag = np.linspace(0.0, 10.0, 100000)[1:]
+        mag = np.linspace(0.0, 10000.0, 1000000)[1:]
+
 
     dMag = mag[1]-mag[0]
         
@@ -121,7 +122,9 @@ def magPDFarray( delta, mag=None ):
     number of deltas (or meanMags)
 
     '''
-    magVec = np.linspace(0.0, 10.0, 1000)[1:]
+    magVec = np.linspace(0.0, 1000.0, 10000)[1:]
+    
+            
     mag = np.matrix(magVec).T*np.ones(len(delta))
 
 

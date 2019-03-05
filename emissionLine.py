@@ -2,7 +2,7 @@ import numpy as np
 import pyfits as fits
 import convolveLssPc as clp
 from scipy.stats import norm
-
+import lensingProbabilityDistribution as lpd
 
 class emissionLine:
     '''
@@ -238,7 +238,8 @@ class emissionLine:
         #does it all need to be the same dEW
         
         equivalentWidthBins = \
-          np.append(equivalentWidthBins, equivalentWidthBins[-1]+self.dEquivalentWidth)
+          np.append(equivalentWidthBins, \
+                        equivalentWidthBins[-1]+self.dEquivalentWidth)
         
 
         print len(equivalentWidthBins)
@@ -275,14 +276,15 @@ class emissionLine:
 
         '''
         #TO DO This needs to be checked this funcion.
-        magnitude, lensingPDF  = \
-          clp.main(z=z, alpha=alpha,nMu=1000)
-
+        lensingPDF = \
+          lpd.lensingProbabilityDistribution( redshift=z, \
+                                              alpha=alpha, \
+                                              nMagnitudeBins=1000)
         #force some kind of normalisation, although this should alrady be normalised
-        lensingPDF /= np.sum(lensingPDF)*(magnitude[1]-magnitude[0])
-        self.dEquivalentWidth = (magnitude[1]-magnitude[0])
-        self.lensingMagnitude = magnitude
-        self.lensingPDF = lensingPDF
+        #lensingPDF /= np.sum(lensingPDF)*(magnitude[1]-magnitude[0])
+        self.dEquivalentWidth = lensingPDF.dMuPrime
+        self.lensingMagnitude = lensingPDF.convolvedPbhPdfWithLssPdf['x']
+        self.lensingPDF = lensingPDF.convolvedPbhPdfWithLssPdf['y']
 
     def convolveIntrinsicEquivalentWidthWithLensingProbability(self):
         '''
@@ -296,7 +298,8 @@ class emissionLine:
         '''
 
         convolvePDF =\
-          np.convolve( self.lensingPDF, self.intrinsicEquivalentWidthDistribution['y'],  'full'  )
+          np.convolve( self.lensingPDF, \
+                self.intrinsicEquivalentWidthDistribution['y'],  'full'  )
 
 
         maxNumber = np.max( [ len(self.lensingPDF), len(self.intrinsicEquivalentWidthDistribution['y'])])

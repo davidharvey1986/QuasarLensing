@@ -126,15 +126,20 @@ class lensingProbabilityDistribution():
         self.totalLensingPDFmagnitudes = \
           np.linspace(0., 1.0, self.nMagnitudeBins)[1:]
           
+        if self.alpha == 0:
+            self.convolvedPbhPdfWithLssPdf =  \
+              {'x':self.probabilityLensingByLss['x'],  \
+               'y':self.probabilityLensingByLss['y']}
+        else:
+            for howFarThroughList, givenMagnitude \
+              in enumerate(self.totalLensingPDFmagnitudes):
+                self.reportProgress(howFarThroughList)
+                self.convolveLssWithPbhForGivenMagnitude( givenMagnitude )
+
         
-        for howFarThroughList, givenMagnitude \
-          in enumerate(self.totalLensingPDFmagnitudes):
-            self.reportProgress(howFarThroughList)
-            self.convolveLssWithPbhForGivenMagnitude( givenMagnitude )
-        
-        self.convolvedPbhPdfWithLssPdf =  \
-          {'x':self.totalLensingPDFmagnitudes,  \
-               'y':self.totalConvolvedPbhPdfWithLssPdf}
+            self.convolvedPbhPdfWithLssPdf =  \
+            {'x':self.totalLensingPDFmagnitudes,  \
+                'y':self.totalConvolvedPbhPdfWithLssPdf}
 
     def reportProgress( self, progress):
         '''
@@ -211,7 +216,7 @@ class lensingProbabilityDistribution():
 
         TurboGLfile = 'TurboGL.dat'
         magnitudes, PDF = np.loadtxt(TurboGLfile, unpack=True)
-
+        
         self.probabilityLensingByLss = \
           {'x':magnitudes+self.meanMagnification, 'y':PDF}
 

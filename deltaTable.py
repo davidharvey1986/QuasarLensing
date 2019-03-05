@@ -8,17 +8,20 @@ so i need a table outlining expected mean mag for a given delta.
 import probabilityMagnification as pm
 import pickle as pkl
 import numpy as np
-
+import sys
 def deltaTable():
 
-    deltaList = np.linspace(0.,10.,100000)
+    deltaList = np.linspace(0.,10.,10000)
     expecMag = []
-    for delta in deltaList:
-        
+    for i, delta in enumerate(deltaList):
+        sys.stdout.write("PROGRESS: %i/%i\r" \
+                             %(i+1, len(deltaList)-1))
+        sys.stdout.flush()
         mag, iPDF = pm.magPDF( delta )
         dMag = mag[1]-mag[-0]
         expecMag.append(np.sum(iPDF*mag*dMag))
         print np.sum(iPDF*mag*dMag)
+        
     pkl.dump([deltaList, np.array(expecMag)], open('deltaTable.pkl','wb'))
 
 
@@ -74,17 +77,19 @@ def getPdfPBH( Magnitudes, MeanMags, pdfMagsDict):
     MeanMagnitudes = pdfMagsDict['meanMagnitudes']
     PDFarray = pdfMagsDict['pdfDistributionArray']
 
-    pdfMagsMatrix = np.matrix(pdfMags).T*np.matrix(np.ones(len(Magnitudes)))
+    pdfMagsMatrix = \
+      np.matrix(pdfMags).T*np.matrix(np.ones(len(Magnitudes)))
 
     pdfMagsIndex =\
       np.argmin(np.abs((pdfMagsMatrix - np.matrix(Magnitudes))),axis=0)
 
-
-    MeanMagsMatrix = np.matrix(MeanMagnitudes).T*np.matrix(np.ones(len(MeanMags)))
-
-    MeanMagsIndex = np.argmin(np.abs((MeanMagnitudes - np.matrix(MeanMags).T)),axis=1).T
-
     
-    
+    MeanMagsMatrix = \
+      np.matrix(MeanMagnitudes).T*np.matrix(np.ones(len(MeanMags)))
+
+    MeanMagsIndex =  \
+      np.argmin(np.abs((MeanMagsMatrix - np.matrix(MeanMags))),axis=0)
+      
+    print MeanMagnitudes[-1], MeanMags[-1]
     return  PDFarray[pdfMagsIndex,MeanMagsIndex]
      
