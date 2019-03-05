@@ -186,7 +186,7 @@ class lensingProbabilityDistribution():
         
         self.totalConvolvedPbhPdfWithLssPdf[ index ] = \
           self.totalProbabilityForGivenMagnitude
-
+        
       
 
     def getDmuPrime(self):
