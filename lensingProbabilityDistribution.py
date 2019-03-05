@@ -118,7 +118,7 @@ class lensingProbabilityDistribution():
         For a given magnitude what is the lensing by PBH and LSS
         
         '''
-        self.makeArrayOfPbhProbabilityDistributions()
+        #self.makeArrayOfPbhProbabilityDistributions()
         
         self.totalConvolvedPbhPdfWithLssPdf = \
            np.zeros(self.nMagnitudeBins-1)
@@ -165,11 +165,10 @@ class lensingProbabilityDistribution():
         #dMuPrime should be the P_LSS one as this defines min
         #Does this need to be changed?
         MuPrimeList = np.arange(0., endInt,  self.dMuPrime) 
-     
+        
         self.probabilityLensedByCompactObject =  \
           dt.getPdfPBH(  magnitude - MuPrimeList*(1.-self.alpha), \
-                             self.alpha*MuPrimeList,\
-                             self.pbhProbabilityDistributionArray )
+                             self.alpha*MuPrimeList )
 
 
         #
@@ -199,7 +198,7 @@ class lensingProbabilityDistribution():
         
         self.getProbabilityLensingByLss()
         self.dMuPrime = (self.probabilityLensingByLss['x'][1]-\
-                    self.probabilityLensingByLss['x'][0])/4.
+                    self.probabilityLensingByLss['x'][0])
 
 
 

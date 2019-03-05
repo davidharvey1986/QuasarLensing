@@ -122,7 +122,7 @@ def magPDFarray( delta, mag=None ):
     number of deltas (or meanMags)
 
     '''
-    magVec = np.linspace(0.0, 1000.0, 10000)[1:]
+    magVec = np.linspace(0.0, 100.0, 10000)[1:]
     
             
     mag = np.matrix(magVec).T*np.ones(len(delta))

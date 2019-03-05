@@ -9,20 +9,28 @@ import probabilityMagnification as pm
 import pickle as pkl
 import numpy as np
 import sys
+import ipdb as pdb
 def deltaTable():
 
+
     deltaList = np.linspace(0.,10.,10000)
+
+
     expecMag = []
+    normalistation = []
+    
     for i, delta in enumerate(deltaList):
         sys.stdout.write("PROGRESS: %i/%i\r" \
-                             %(i+1, len(deltaList)-1))
+                             %(i+1, len(deltaList)))
         sys.stdout.flush()
-        mag, iPDF = pm.magPDF( delta )
-        dMag = mag[1]-mag[-0]
-        expecMag.append(np.sum(iPDF*mag*dMag))
-        print np.sum(iPDF*mag*dMag)
+        iPDF = pbhPDF( delta )
+    
+        expecMag.append(iPDF.mean)
+        normalistation.append(iPDF.norm)
         
-    pkl.dump([deltaList, np.array(expecMag)], open('deltaTable.pkl','wb'))
+        
+    pkl.dump([deltaList, np.array(expecMag), np.array(normalistation)],\
+                 open('deltaTable.pkl','wb'))
 
 
 def getDelta( z=1.0, meanMag=None):
@@ -34,7 +42,7 @@ def getDelta( z=1.0, meanMag=None):
     if meanMag is None:
         meanMag = pm.getMeanMag( z )
 
-    deltaList, magnitudes = pkl.load(open('deltaTable.pkl','rb'))
+    deltaList, magnitudes, norm = pkl.load(open('deltaTable.pkl','rb'))
 
     delta = deltaList[ np.argmin( np.abs( magnitudes - meanMag))]
 
@@ -50,7 +58,8 @@ def generatePDFs():
     '''
 
     
-    deltaList, MeanMagnitudes = pkl.load(open('deltaTable.pkl','rb'))
+    deltaList, MeanMagnitudes, norm = \
+      pkl.load(open('deltaTable.pkl','rb'))
 
     #mag, pdf =  pm.magPDF( deltaList[0] )
     #Genereate an array that is magnitude across and meanMag
@@ -70,26 +79,69 @@ def generatePDFs():
         
 
         
-def getPdfPBH( Magnitudes, MeanMags, pdfMagsDict):
-
-    #This generates a 2x2 array of mea
-    pdfMags = pdfMagsDict['pdfMagnitudes']
-    MeanMagnitudes = pdfMagsDict['meanMagnitudes']
-    PDFarray = pdfMagsDict['pdfDistributionArray']
-
-    pdfMagsMatrix = \
-      np.matrix(pdfMags).T*np.matrix(np.ones(len(Magnitudes)))
-
-    pdfMagsIndex =\
-      np.argmin(np.abs((pdfMagsMatrix - np.matrix(Magnitudes))),axis=0)
+def getPdfPBH( Magnitudes, MeanMags):
 
     
-    MeanMagsMatrix = \
-      np.matrix(MeanMagnitudes).T*np.matrix(np.ones(len(MeanMags)))
-
-    MeanMagsIndex =  \
-      np.argmin(np.abs((MeanMagsMatrix - np.matrix(MeanMags))),axis=0)
+    #Get the deltas that correspond to the meanMags
+    deltaList, deltaMeanMags, normalisations = \
+      pkl.load(open('deltaTable.pkl','rb'))
       
-    print MeanMagnitudes[-1], MeanMags[-1]
-    return  PDFarray[pdfMagsIndex,MeanMagsIndex]
-     
+    deltaMeanMagsMatrix = \
+      np.matrix(deltaMeanMags).T*np.matrix(np.ones(len(MeanMags)))
+
+    deltaMeanMagsIndex =  np.argmin(np.abs(np.array((deltaMeanMagsMatrix -  np.matrix(MeanMags)))),axis=0)
+
+    chosenDeltas = deltaList[deltaMeanMagsIndex]
+    chosenNorms = normalisations[deltaMeanMagsIndex]
+    
+    probablityGivenMagnitudes = \
+      probPbhGivenMag( Magnitudes, chosenDeltas, chosenNorms )
+    pdb.set_trace()
+
+    return probablityGivenMagnitudes
+
+
+
+class pbhPDF:
+
+    def __init__( self, delta ):
+
+        '''
+        Using equation A3 from Z&S
+        or eqyuation 8 from Rauch 1990
+        
+        '''
+        self.delta = delta
+        self.mag = np.linspace(0.0, 10000.0, 1000000)[1:]
+        
+        self.dMag = self.mag[1]-self.mag[0]
+        
+       
+        P = rauchFunct( self.mag, self.delta)
+        
+        self.norm = np.sum(P)*self.dMag
+
+        self.pdf = P/self.norm
+    
+        self.mean = np.sum(self.pdf*self.dMag*self.mag)
+
+
+def rauchFunct( mag, delta):
+    '''
+    Unormalisaed PDF from the rauch function
+    for lensing of pbg
+    '''
+
+    topFrac = 1. - np.exp( -mag/delta)
+    botFrac = (mag+1)**2 - 1.
+        
+    P = ( topFrac/botFrac)**(3./2.)
+    return P
+        
+def probPbhGivenMag( mag, delta, norm):
+    '''
+    Return the probability of magnitude, given the delta
+    and the normalisation
+    '''
+    
+    return rauchFunct( mag, delta)/norm
