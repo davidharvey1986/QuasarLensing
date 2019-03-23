@@ -13,7 +13,7 @@ import ipdb as pdb
 def deltaTable():
 
 
-    deltaList = np.linspace(0.,10.,10000)
+    deltaList = np.linspace(0.,5.,1000)
 
 
     expecMag = []
@@ -112,7 +112,7 @@ class pbhPDF:
         
         '''
         self.delta = delta
-        self.mag = np.linspace(0.0, 10000.0, 1000000)[1:]
+        self.mag = np.linspace(0.0, 100.0, 100000000)[1:]
         
         self.dMag = self.mag[1]-self.mag[0]
         
