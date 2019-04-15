@@ -10,6 +10,7 @@ import pickle as pkl
 import numpy as np
 import sys
 import ipdb as pdb
+from predictDeltaAndNormalisation import getNormAndDeltaForMagnitude
 def deltaTable():
 
 
@@ -83,20 +84,13 @@ def getPdfPBH( Magnitudes, MeanMags):
 
     
     #Get the deltas that correspond to the meanMags
-    deltaList, deltaMeanMags, normalisations = \
-      pkl.load(open('deltaTable.pkl','rb'))
+    chosenNorms, chosenDeltas = \
+      getNormAndDeltaForMagnitude(MeanMags)
       
-    deltaMeanMagsMatrix = \
-      np.matrix(deltaMeanMags).T*np.matrix(np.ones(len(MeanMags)))
-
-    deltaMeanMagsIndex =  np.argmin(np.abs(np.array((deltaMeanMagsMatrix -  np.matrix(MeanMags)))),axis=0)
-
-    chosenDeltas = deltaList[deltaMeanMagsIndex]
-    chosenNorms = normalisations[deltaMeanMagsIndex]
-    
     probablityGivenMagnitudes = \
       probPbhGivenMag( Magnitudes, chosenDeltas, chosenNorms )
-    pdb.set_trace()
+
+    probablityGivenMagnitudes[ chosenNorms == 0] = 0
 
     return probablityGivenMagnitudes
 

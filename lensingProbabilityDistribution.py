@@ -51,10 +51,10 @@ class lensingProbabilityDistribution():
         self.getDmuPrime()
         self.checkPickleFileExists()
 
-        if not self.boolPickleFileExists:
-            self.convolvePbhPdfWithLssPdf()
+        #if not self.boolPickleFileExists:
+        self.convolvePbhPdfWithLssPdf()
 
-            self.writeToPickleFile()
+        self.writeToPickleFile()
 
         self.getConvolvedPbhPdfWithLssPdf()
             
@@ -164,13 +164,15 @@ class lensingProbabilityDistribution():
         #dMuPrime = endInt/nInt
         #dMuPrime should be the P_LSS one as this defines min
         #Does this need to be changed?
-        MuPrimeList = np.arange(0., endInt,  self.dMuPrime) 
+
+        MinNMuPrime = np.max([10., endInt / self.dMuPrime])
+        MuPrimeList = np.linspace(0.,endInt,MinNMuPrime)[1:-1]
         
         self.probabilityLensedByCompactObject =  \
           dt.getPdfPBH(  magnitude - MuPrimeList*(1.-self.alpha), \
                              self.alpha*MuPrimeList )
 
-
+        
         #
         self.getProbabilityLensingByLssForGivenMagnitude(MuPrimeList)
                                 
@@ -198,7 +200,7 @@ class lensingProbabilityDistribution():
         
         self.getProbabilityLensingByLss()
         self.dMuPrime = (self.probabilityLensingByLss['x'][1]-\
-                    self.probabilityLensingByLss['x'][0])
+                    self.probabilityLensingByLss['x'][0]) / 8.
 
 
 
