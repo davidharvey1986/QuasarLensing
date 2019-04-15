@@ -232,19 +232,9 @@ class lensingProbabilityDistribution():
         magnitudeList : an array of magnitudes I want to find the 
         correspodnig probabilty to in TUrboGL PDF>
         '''
-        pdfMagsMatrix = np.matrix(self.probabilityLensingByLss['x']).T*\
-          np.matrix(np.ones(len(magnitudeList)))
-        
-        pdfMagsIndex = \
-          np.argmin(np.abs((pdfMagsMatrix - np.matrix(magnitudeList))),\
-                        axis=0)
-    
-        correspondingMag = self.probabilityLensingByLss['x'][pdfMagsIndex]
-        
-        returnPDF = self.probabilityLensingByLss['y'][pdfMagsIndex]
-        returnPDF[ correspondingMag-magnitudeList > 2.*self.dMuPrime] = 0.
-    
-        self.probabilityLensingByLssForGivenMagnitude = returnPDF
+        self.probabilityLensingByLssForGivenMagnitude = \
+          np.interp( magnitudeList, self.probabilityLensingByLss['x'],\
+                         self.probabilityLensingByLss['y'])
         
     
 
