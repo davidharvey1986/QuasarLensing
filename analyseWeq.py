@@ -43,11 +43,14 @@ def exampleEquivalentWidthConvolutedWithLensingAndCompared():
 
                  
     #plot the resulting convolution
-        plt.plot(emissionLineCl.lensingMagnitude,\
-                    emissionLineCl.lensingPDF, \
+        plt.plot(emissionLineCl.predictedLensedEquivalentWidthDistribution['x'],\
+                    emissionLineCl.predictedLensedEquivalentWidthDistribution['y'], \
                     label=r'$\alpha=%0.2f$' % i)
-        
+        print np.sum(emissionLineCl.predictedLensedEquivalentWidthDistribution['x']*\
+                         emissionLineCl.predictedLensedEquivalentWidthDistribution['y']*\
+                         emissionLineCl.dEquivalentWidth)
     plt.legend(loc=2, prop={'size': 6})
+    plt.ylim(0,3.)
 
     plt.xlim(-0.7,0.7)
     plt.plot([0,0],[0,10],'--')

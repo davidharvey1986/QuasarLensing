@@ -19,7 +19,7 @@ def main(z=1.0, nMu=1000):
     alphas for a given redshift of 1.0
     '''
     
-    alphaList = [0.05, 0.1, 0.3,0.5,0.83]
+    alphaList = [0.1, 0.3,0.5,0.83]
     for alpha in alphaList:
         lensingPDF = \
           lpd.lensingProbabilityDistribution( redshift=z, \
@@ -37,6 +37,9 @@ def main(z=1.0, nMu=1000):
         plt.yscale('log')
         plt.ylim(0.05,130)
         plt.xlim(-0.6,0.6)
+
+    plt.xlabel(r'$\mu_{\rm EW}$')
+    plt.ylabel(r'$P(\mu_{\rm EW})$')
     plt.legend()
     plt.show()
 

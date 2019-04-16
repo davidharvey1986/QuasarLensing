@@ -266,77 +266,73 @@ class emissionLine:
         #lensingPDF /= np.sum(lensingPDF)*(magnitude[1]-magnitude[0])
         self.dEquivalentWidth = lensingPDF.dEquivalentWidth
         self.lensingEquivalentWidth = lensingPDF.convolvedPbhPdfWithLssPdf['x'] + \
-          lensingPDF.dEquivalentWidth/2.
+          lensingPDF.dEquivalentWidth
         self.lensingPDF = lensingPDF.convolvedPbhPdfWithLssPdf['y']
-
+        self.alpha=alpha
         
-        self.lensingEquivalentWidth[ self.lensingPDF > 0]
-        self.lensingPDF[ self.lensingPDF > 0 ]
-       
+        self.lensingEquivalentWidth = self.lensingEquivalentWidth[ self.lensingPDF > 0]
+        self.lensingPDF = self.lensingPDF[ self.lensingPDF > 0 ]
+        
     def convolveIntrinsicEquivalentWidthWithLensingProbability(self):
         '''
         In order to get an estimate of the expected distribution of 
         equivalent widths i need to take the intrinsic distrubotion
         and convole it with the lensing PDF
 
-        NOTE: Currently the lensing pronbability is in terms of magnitudes
-        this will change once we have it in terms of Equivalent widhts
+        It would be faster to do this in numpy convolve but i dont trust it
         
+        Using tge fft directly is the best way
         '''
         nTotalXbins = len(self.lensingEquivalentWidth)+\
           len(self.intrinsicEquivalentWidthDistribution['x']) - 1
 
-        startValue = self.intrinsicEquivalentWidthDistribution['x'][0] - \
-          len(self.lensingEquivalentWidth)*self.dEquivalentWidth
-          
+        startValue = self.intrinsicEquivalentWidthDistribution['x'][0] - np.ceil(len(self.lensingEquivalentWidth)/2.)*self.dEquivalentWidth
+
+        #Create a common axis for the two distributions
         convolvedX = np.arange(0.,nTotalXbins)*self.dEquivalentWidth + startValue
-        convolvedYlss = np.zeros(len(convolvedX))
-       
-        convolvedYtotal = np.zeros(len(convolvedX))
+        convolvedYintrinsic = np.zeros(len(convolvedX))
+        convolvedYlensing = np.zeros(len(convolvedX))
+        
 
         for i, iX in enumerate(convolvedX):
             matchVectors = np.abs(self.intrinsicEquivalentWidthDistribution['x'] - iX) < 1e-10
-            if len(self.intrinsicEquivalentWidthDistribution['y'][matchVectors]) == 0:
-                convolvedYlss[i] = 0
-            else:
+            matchVectorsLensing = np.abs(self.lensingEquivalentWidth - iX) < 1e-10
 
-                convolvedYlss[i] = \
+            if len(self.intrinsicEquivalentWidthDistribution['y'][matchVectors]) > 0:
+                convolvedYintrinsic[i] = \
                   self.intrinsicEquivalentWidthDistribution['y'][matchVectors ]
+            if len(self.lensingPDF[matchVectorsLensing]) > 0:
+                convolvedYlensing[i] = self.lensingPDF[matchVectorsLensing]
 
+
+        '''
+        #THe direct way i did which agrees with the fft version
+        #convolvedYtotal = np.zeros(len(convolvedX))
+
+        convolvedYtotal = np.zeros(len(convolvedX))
         for i, xPrime in enumerate(convolvedX):
-            convolvedYlensing = np.zeros(len(convolvedX))
+            convolvedYlensingCheck = np.zeros(len(convolvedX))
             for j, jX in enumerate(convolvedX):
-                matchVectors = np.abs(self.lensingEquivalentWidth + xPrime - iX) < 1e-10
+                matchVectors = np.abs(self.lensingEquivalentWidth + xPrime - jX -self.dEquivalentWidth/2. ) < 1e-10
             
                 if len(self.lensingPDF[matchVectors]) == 0:
-                    convolvedYlensing[j] = 0
+                    convolvedYlensingCheck[j] = 0
                 else:
-                    convolvedYlensing[j] = \
+                    convolvedYlensingCheck[j] = \
                     self.lensingPDF[ matchVectors ]
             
-            print i, np.sum( convolvedYlensing*convolvedYlss*self.dEquivalentWidth)
-            
-            convolvedYtotal[i] = np.sum( convolvedYlensing*convolvedYlss*self.dEquivalentWidth)
-            if     convolvedYtotal[i] > 0:
-                plt.plot(convolvedX, convolvedYlensing )
-                plt.plot(convolvedX, convolvedYlensing )
-                
+            convolvedYtotal[i] = np.sum( convolvedYlensingCheck*convolvedYlss*self.dEquivalentWidth)
+         
+        '''
 
-
-                
-        plt.plot(convolvedX,convolvedYlss,'-')
-
-        plt.show()
-        pdb.set_trace()
-
-
-    
-
-        #Need to get the two pdfs on a common frame
-        
-
+        #Convolve in fourier space
+        convolvedYnumpy = np.fft.ifft( np.fft.fft(convolvedYintrinsic)*np.fft.fft(convolvedYlensing))
+        convolvedYnumpy /= np.sum(convolvedYnumpy)*self.dEquivalentWidth
+        #The fft switches shit around so roll it through
+        convolvedYnumpy = np.roll(convolvedYnumpy, len(convolvedYnumpy)/2)
+        convolvedX = convolvedX[::-1]
 
         self.predictedLensedEquivalentWidthDistribution = \
-          {'x':newX,  'y': convolvePDF}
+          {'x':convolvedX,  'y': np.real(convolvedYnumpy)}
                              
         
