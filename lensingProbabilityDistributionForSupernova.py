@@ -7,7 +7,11 @@ import os
 import pickle as pkl
 import numpy as np
 import ipdb as pdb
-
+'''
+This class is used to create the lensing probability distrinutio
+assuming lened supernova
+i.e. the probability distirubtoi in the papers cited below
+'''
 
 class lensingProbabilityDistribution():
     '''
@@ -15,68 +19,50 @@ class lensingProbabilityDistribution():
     from TurboGL which is the probability density function for
     weak lensing by large scale structure, and convovle it 
     with the probability distribution funcion of compact 
-    objects to produce the distributions of equivalent widths
+    objects. 
 
-    It is based in the code
+    Currently it reproduces the distributions in 
     https://www.sciencedirect.com/science/article/pii/S2212686418300293
     
-    but adapted for equivalent widths in linear
+    However ultimately it needs to be adapted to Equvalent widths.
 
-    Will need to adapted for log
-
+    For now it outputs a probablity as a function of magnitude
     '''
 
     
-    def __init__( self, redshift=1.0, alpha=0., nEquivalentWidthBins=1000):
+    def __init__( self, redshift=1.0, alpha=0., nMagnitudeBins=1000):
         '''
         This distribution is a function of two parameters
         redshift : the redshift at which i want to calcuate the probability
                    distribution
         alpha : the fraction of Primordial Black Holes that make up 
                 dark matter. Throughout the code it is known as pbh
-        nEquivalentWidthBins : the number of equvalent width bins 
-                  that the code will calcualte te convolution 
-                  at and the final PDF is sampled at. Default = 1000
+        nMagnitudeBins : the number of magnitude bins that the code
+                 will calcualte te convolution at and the final PDF
+                 is sampled at. Default = 1000
         '''
         self.delta = dt.getDelta(redshift)
         self.redshift = redshift
         self.alpha = alpha
-        self.nEquivalentWidthBins = nEquivalentWidthBins
+        self.nMagnitudeBins = nMagnitudeBins
         self.getMeanMagnitude()
 
         #to be changed to include redshift dependence:
         self.getProbabilityLensingByLss()
         self.pickleFileName = \
-          'pickles/PL_EW_%0.1f_%0.2f_%i.pkl' % \
-          (redshift,alpha,nEquivalentWidthBins)
+          'pickles/PL_%0.1f_%0.2f_%i.pkl' % (redshift,alpha,nMagnitudeBins)
 
         self.getDmuPrime()
         self.checkPickleFileExists()
 
-        if not self.boolPickleFileExists:
-            self.convolvePbhPdfWithLssPdf()
+        #if not self.boolPickleFileExists:
+        self.convolvePbhPdfWithLssPdf()
 
-            self.writeToPickleFile()
+        self.writeToPickleFile()
 
-        #self.getConvolvedPbhPdfWithLssPdf()
+        self.getConvolvedPbhPdfWithLssPdf()
             
-        self.normalisePDF()
-        self.getPDFmean()
-    def normalisePDF(self):
-        '''
-        Normalise the pdf so the integral is 1
-        '''
 
-        normalisation = np.sum( self.convolvedPbhPdfWithLssPdf['y'])\
-          *self.dEquivalentWidth
-           
-        self.convolvedPbhPdfWithLssPdf['y'] /= normalisation
-
-    def getPDFmean( self ):
-
-        self.pdfMean = np.sum(self.convolvedPbhPdfWithLssPdf['y']*\
-                            self.convolvedPbhPdfWithLssPdf['x'])*\
-                            self.dEquivalentWidth
     def getConvolvedPbhPdfWithLssPdf( self ):
         return self.convolvedPbhPdfWithLssPdf['x'], \
           self.convolvedPbhPdfWithLssPdf['y']
@@ -91,12 +77,11 @@ class lensingProbabilityDistribution():
         
         if os.path.isfile( self.pickleFileName ):
             
-            totalEquivalentWidth, totalProbability = \
+            totalMagnitude, totalProbability = \
             pkl.load( open( self.pickleFileName, 'rb'))
 
             self.convolvedPbhPdfWithLssPdf = \
-            {'x':totalEquivalentWidth, 'y':totalProbability}
-            self.dEquivalentWidth = totalEquivalentWidth[1]-totalEquivalentWidth[0]
+            {'x':totalMagnitude, 'y':totalProbability}
 
         self.boolPickleFileExists = \
           os.path.isfile( self.pickleFileName )
@@ -110,6 +95,22 @@ class lensingProbabilityDistribution():
         
         self.meanMagnification = pm.getMeanMag( self.redshift )
 
+    def makeArrayOfPbhProbabilityDistributions( self ):
+        '''
+        Generate a 2D array of probability distributions where
+        one axis is PDF as afuncion of magnitude
+        Then this is done for a variety of mean magnitudes
+        
+        '''
+
+        pdfMags, meanMagnitudes, PDFarray = \
+          dt.generatePDFs()
+
+        self.pbhProbabilityDistributionArray = \
+          {'pdfMagnitudes':pdfMags ,\
+               'meanMagnitudes':meanMagnitudes, \
+               'pdfDistributionArray':PDFarray}
+        
 
     def convolvePbhPdfWithLssPdf( self ):
         '''
@@ -121,25 +122,27 @@ class lensingProbabilityDistribution():
         For a given magnitude what is the lensing by PBH and LSS
         
         '''
+        #self.makeArrayOfPbhProbabilityDistributions()
         
         self.totalConvolvedPbhPdfWithLssPdf = \
-           np.zeros(self.nEquivalentWidthBins-2)
+           np.zeros(self.nMagnitudeBins-1)
            
-        self.totalLensingPDFequivalentWidths = \
-          np.linspace(-1., 1.0, self.nEquivalentWidthBins)[1:-1]
+        self.totalLensingPDFmagnitudes = \
+          np.linspace(0., 1.0, self.nMagnitudeBins)[1:]
           
-        self.dEquivalentWidth = \
-          self.totalLensingPDFequivalentWidths[1]-\
-          self.totalLensingPDFequivalentWidths[0]
-
-        for howFarThroughList, givenEquivalentWidth \
-          in enumerate(self.totalLensingPDFequivalentWidths):
-            self.reportProgress(howFarThroughList)
-            self.convolveLssWithPbhForGivenEquivalentWidth( givenEquivalentWidth )
+        if self.alpha == 0:
+            self.convolvedPbhPdfWithLssPdf =  \
+              {'x':self.probabilityLensingByLss['x'],  \
+               'y':self.probabilityLensingByLss['y']}
+        else:
+            for howFarThroughList, givenMagnitude \
+              in enumerate(self.totalLensingPDFmagnitudes):
+                self.reportProgress(howFarThroughList)
+                self.convolveLssWithPbhForGivenMagnitude( givenMagnitude )
 
         
-        self.convolvedPbhPdfWithLssPdf =  \
-            {'x':self.totalLensingPDFequivalentWidths,  \
+            self.convolvedPbhPdfWithLssPdf =  \
+            {'x':self.totalLensingPDFmagnitudes,  \
                 'y':self.totalConvolvedPbhPdfWithLssPdf}
 
     def reportProgress( self, progress):
@@ -148,47 +151,47 @@ class lensingProbabilityDistribution():
         '''
         
         sys.stdout.write("PROGRESS: %i/%i\r" \
-            %(progress+1, self.nEquivalentWidthBins-1))
+                             %(progress+1, self.nMagnitudeBins-1))
         sys.stdout.flush()
         
-    def convolveLssWithPbhForGivenEquivalentWidth( self, equivalentWidth ):
+    def convolveLssWithPbhForGivenMagnitude( self, magnitude ):
         '''
         For a given input magnitude what is the 
         probability that you will be lensed by compact objects
         and LSS
         '''
-        #Get the start of the integral
-        startInt = np.max([0,equivalentWidth/self.alpha])
-        
-        #End of the integral is formally infinity
-        #so will have to curtail some point
-        endInt = 10 #Will have to do a convergence test
-        
 
-        MinNumEwPrime = np.max([10., (endInt-startInt) / self.dMuPrime])
-        MinNEwPrime = 1000
-        EwPrimeList = np.linspace(startInt,endInt,MinNEwPrime)[1:]
+        #Get the end of the integral, but to stop
+        #it going on forvere i curtail it here.
+        endInt = np.min([magnitude / (1.-self.alpha), 10.])
+        
+        #dMuPrime = endInt/nInt
+        #dMuPrime should be the P_LSS one as this defines min
+        #Does this need to be changed?
+
+        MinNMuPrime = np.max([10., endInt / self.dMuPrime])
+        MuPrimeList = np.linspace(0.,endInt,MinNMuPrime)[1:-1]
         
         self.probabilityLensedByCompactObject =  \
-          dt.getPdfPBH( self.alpha*EwPrimeList-equivalentWidth,\
-                            self.alpha*EwPrimeList)
+          dt.getPdfPBH(  magnitude - MuPrimeList*(1.-self.alpha), \
+                             self.alpha*MuPrimeList )
 
         
         #
-        self.getProbabilityLensingByLssForGivenMagnitude(EwPrimeList)
+        self.getProbabilityLensingByLssForGivenMagnitude(MuPrimeList)
                                 
-        dEWPrime = EwPrimeList[1]-EwPrimeList[0]
-        self.dP_L = dEWPrime*\
+        
+        self.dP_L = self.dMuPrime*\
           self.probabilityLensingByLssForGivenMagnitude*\
           self.probabilityLensedByCompactObject
     
           
-        self.totalProbabilityForGivenEquivalentWidth = np.sum(self.dP_L)
+        self.totalProbabilityForGivenMagnitude = np.sum(self.dP_L)
 
-        index = self.totalLensingPDFequivalentWidths == equivalentWidth
+        index = self.totalLensingPDFmagnitudes == magnitude
         
         self.totalConvolvedPbhPdfWithLssPdf[ index ] = \
-          self.totalProbabilityForGivenEquivalentWidth
+          self.totalProbabilityForGivenMagnitude
         
       
 

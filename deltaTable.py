@@ -10,11 +10,12 @@ import pickle as pkl
 import numpy as np
 import sys
 import ipdb as pdb
-from predictDeltaAndNormalisation import getNormAndDeltaForMagnitude
+from predictDeltaAndNormalisation import *
+
 def deltaTable():
 
 
-    deltaList = np.linspace(0.,5.,1000)
+    deltaList = 10**np.linspace(-2.,2.,1000)
 
 
     expecMag = []
@@ -106,7 +107,7 @@ class pbhPDF:
         
         '''
         self.delta = delta
-        self.mag = np.linspace(0.0, 100.0, 100000000)[1:]
+        self.mag = np.linspace(0.0, 100.0, 10000000)[1:]
         
         self.dMag = self.mag[1]-self.mag[0]
         
@@ -139,3 +140,6 @@ def probPbhGivenMag( mag, delta, norm):
     '''
     
     return rauchFunct( mag, delta)/norm
+if __name__ == '__main__':
+    deltaTable()
+    

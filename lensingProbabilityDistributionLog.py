@@ -62,6 +62,7 @@ class lensingProbabilityDistribution():
             
         self.normalisePDF()
         self.getPDFmean()
+        
     def normalisePDF(self):
         '''
         Normalise the pdf so the integral is 1
@@ -97,7 +98,6 @@ class lensingProbabilityDistribution():
             self.convolvedPbhPdfWithLssPdf = \
             {'x':totalEquivalentWidth, 'y':totalProbability}
             self.dEquivalentWidth = totalEquivalentWidth[1]-totalEquivalentWidth[0]
-
         self.boolPickleFileExists = \
           os.path.isfile( self.pickleFileName )
 
@@ -157,28 +157,29 @@ class lensingProbabilityDistribution():
         probability that you will be lensed by compact objects
         and LSS
         '''
-        #Get the start of the integral
-        startInt = np.max([0,equivalentWidth/self.alpha])
+        #Change the inegral variable
+        nu = np.log(1.+equivalentWidth)
         
+        #Get the start of the integral
+        startInt = np.max([0, equivalentWidth/self.alpha])
+
         #End of the integral is formally infinity
         #so will have to curtail some point
-        endInt = 10 #Will have to do a convergence test
+        endInt = np.log(1.+10) #Will have to do a convergence test
         
 
-        MinNumEwPrime = np.max([10., (endInt-startInt) / self.dMuPrime])
         MinNEwPrime = 1000
-        EwPrimeList = np.linspace(startInt,endInt,MinNEwPrime)[1:]
-        
+        nuPrime = np.linspace(startInt,endInt,MinNEwPrime)[1:]
+     
         self.probabilityLensedByCompactObject =  \
-          dt.getPdfPBH( self.alpha*EwPrimeList-equivalentWidth,\
-                            self.alpha*EwPrimeList)
+          dt.getPdfPBH( self.alpha*nuPrime-nu, self.alpha*nuPrime)
 
         
         #
-        self.getProbabilityLensingByLssForGivenMagnitude(EwPrimeList)
+        self.getProbabilityLensingByLssForGivenMagnitude(nuPrime)
                                 
-        dEWPrime = EwPrimeList[1]-EwPrimeList[0]
-        self.dP_L = dEWPrime*\
+        dNuPrime = nuPrime[1] - nuPrime[0]
+        self.dP_L = self.dMuPrime*\
           self.probabilityLensingByLssForGivenMagnitude*\
           self.probabilityLensedByCompactObject
     
@@ -188,7 +189,7 @@ class lensingProbabilityDistribution():
         index = self.totalLensingPDFequivalentWidths == equivalentWidth
         
         self.totalConvolvedPbhPdfWithLssPdf[ index ] = \
-          self.totalProbabilityForGivenEquivalentWidth
+          self.totalProbabilityForGivenEquivalentWidth / (1.+equivalentWidth)
         
       
 

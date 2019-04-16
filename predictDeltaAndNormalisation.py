@@ -61,17 +61,6 @@ def lossFunction( split, x, delta, norm ):
     
 
 
-#These are the results from the predictNormAndDelta function
-def getNormAndDeltaFromMeanMag( meanMag ):
-    deltaCoefficients = np.array([0.4966286 , 1.95295421])
-    normCoefficients = np.array([ 0.78158726, -1.0664505 ])
-
-    delta = magnitude2param( meanMag, *deltaCoefficients)
-    norm = magnitude2param( meanMag, *normCoefficients)
-
-    return norm, delta
-
-
 
 def getDeltaTable():
     '''
