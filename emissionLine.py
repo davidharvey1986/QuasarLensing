@@ -2,6 +2,8 @@ import numpy as np
 import pyfits as fits
 import convolveLssPc as clp
 from scipy.stats import norm
+from scipy.stats import rayleigh
+
 import lensingProbabilityDistribution as lpd
 import ipdb as pdb
 from matplotlib import pyplot as plt
@@ -212,8 +214,16 @@ class emissionLine:
         
         if mimicSuperNova:
             #This is purely for test purposes
-            x = np.arange(-1.0,1.0,  self.dEquivalentWidth)
+            x = np.arange(-3.0,3.0,  self.dEquivalentWidth)
             y = norm.pdf(x, 0., 0.15)
+            #these need to be symmetric otherwise, the position of the final
+            #convoution is weird since the fft switches things around,
+            #I could probably figure it out but for now this will do
+
+            #Also if things go NaN then try making this symmetric in even or
+            #odd numbers i.e. (-1,1) or (-2,2)
+            x = np.arange(-5.0, 5.0,  self.dEquivalentWidth)
+            y = rayleigh.pdf(x, 0., 1.0)
             self.intrinsicEquivalentWidthDistribution = \
               {'y':y, 'x':x}
             return
@@ -286,13 +296,12 @@ class emissionLine:
         nTotalXbins = len(self.lensingEquivalentWidth)+\
           len(self.intrinsicEquivalentWidthDistribution['x']) - 1
 
-        startValue = self.intrinsicEquivalentWidthDistribution['x'][0] - np.ceil(len(self.lensingEquivalentWidth)/2.)*self.dEquivalentWidth
+        startValue = self.intrinsicEquivalentWidthDistribution['x'][0] - np.ceil(len(self.lensingEquivalentWidth)/2.)*self.dEquivalentWidth 
 
         #Create a common axis for the two distributions
         convolvedX = np.arange(0.,nTotalXbins)*self.dEquivalentWidth + startValue
         convolvedYintrinsic = np.zeros(len(convolvedX))
         convolvedYlensing = np.zeros(len(convolvedX))
-        
 
         for i, iX in enumerate(convolvedX):
             matchVectors = np.abs(self.intrinsicEquivalentWidthDistribution['x'] - iX) < 1e-10
@@ -304,13 +313,13 @@ class emissionLine:
             if len(self.lensingPDF[matchVectorsLensing]) > 0:
                 convolvedYlensing[i] = self.lensingPDF[matchVectorsLensing]
 
-
-        '''
+                '''
         #THe direct way i did which agrees with the fft version
         #convolvedYtotal = np.zeros(len(convolvedX))
 
         convolvedYtotal = np.zeros(len(convolvedX))
         for i, xPrime in enumerate(convolvedX):
+            print i
             convolvedYlensingCheck = np.zeros(len(convolvedX))
             for j, jX in enumerate(convolvedX):
                 matchVectors = np.abs(self.lensingEquivalentWidth + xPrime - jX -self.dEquivalentWidth/2. ) < 1e-10
@@ -321,17 +330,21 @@ class emissionLine:
                     convolvedYlensingCheck[j] = \
                     self.lensingPDF[ matchVectors ]
             
-            convolvedYtotal[i] = np.sum( convolvedYlensingCheck*convolvedYlss*self.dEquivalentWidth)
-         
-        '''
-
+            convolvedYtotal[i] = np.sum( convolvedYlensingCheck*convolvedYintrinsic*self.dEquivalentWidth)
+         '''
+       
         #Convolve in fourier space
         convolvedYnumpy = np.fft.ifft( np.fft.fft(convolvedYintrinsic)*np.fft.fft(convolvedYlensing))
         convolvedYnumpy /= np.sum(convolvedYnumpy)*self.dEquivalentWidth
-        #The fft switches shit around so roll it through
-        convolvedYnumpy = np.roll(convolvedYnumpy, len(convolvedYnumpy)/2)
-        convolvedX = convolvedX[::-1]
+        
+        #so the fft switches the negative and positive bits around
+        #so switch it back through the middle, however if the intrinsic distribution is not symmetric
+        #around 0 this gets complicated
+        middleIndex = np.int(np.floor(len(convolvedYnumpy)/2.))
+        convolvedYnumpy = np.append( convolvedYnumpy[ middleIndex:], convolvedYnumpy[:middleIndex])
 
+
+        
         self.predictedLensedEquivalentWidthDistribution = \
           {'x':convolvedX,  'y': np.real(convolvedYnumpy)}
                              
