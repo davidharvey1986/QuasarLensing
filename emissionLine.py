@@ -298,21 +298,15 @@ class emissionLine:
         '''
 
         convolvePDF =\
-          np.convolve( self.lensingPDF, \
-                self.intrinsicEquivalentWidthDistribution['y'],  'full'  )
+          np.convolve(  self.intrinsicEquivalentWidthDistribution['y'], self.lensingPDF, \
+                        'full'  )
 
 
-        maxNumber = np.max( [ len(self.lensingPDF), len(self.intrinsicEquivalentWidthDistribution['y'])])
-        #so is the overlap where the convolved PDF would not be zero
-        #assuming that the lensingPDF is all nonzero
-        magnitudeMiddleValue = np.ceil(maxNumber/2.)*self.dEquivalentWidth
+        dX = 
+        convolveX = np.linspace(
 
-        convolvePDF /= np.sum(convolvePDF)*self.dEquivalentWidth
 
         
-        newX = np.arange(len(convolvePDF))*self.dEquivalentWidth - magnitudeMiddleValue
-        
-
         self.predictedLensedEquivalentWidthDistribution = \
           {'x':newX,  'y': convolvePDF}
                              

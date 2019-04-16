@@ -51,12 +51,12 @@ class lensingProbabilityDistribution():
         self.getDmuPrime()
         self.checkPickleFileExists()
 
-        #if not self.boolPickleFileExists:
-        self.convolvePbhPdfWithLssPdf()
+        if not self.boolPickleFileExists:
+            self.convolvePbhPdfWithLssPdf()
+        
+            self.writeToPickleFile()
 
-        self.writeToPickleFile()
-
-        self.getConvolvedPbhPdfWithLssPdf()
+        #self.getConvolvedPbhPdfWithLssPdf()
             
 
     def getConvolvedPbhPdfWithLssPdf( self ):

@@ -199,3 +199,7 @@ def compareCats():
 
 
     plt.savefig('CompareDR12toDR9.pdf')
+
+
+if __name__ == '__main__':
+    exampleEquivalentWidthConvolutedWithLensingAndCompared()
