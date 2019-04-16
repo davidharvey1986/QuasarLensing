@@ -62,6 +62,7 @@ class lensingProbabilityDistribution():
             
         self.normalisePDF()
         self.getPDFmean()
+        
     def normalisePDF(self):
         '''
         Normalise the pdf so the integral is 1
@@ -189,7 +190,7 @@ class lensingProbabilityDistribution():
         
         self.totalConvolvedPbhPdfWithLssPdf[ index ] = \
           self.totalProbabilityForGivenEquivalentWidth
-        
+    
       
 
     def getDmuPrime(self):
@@ -222,7 +223,7 @@ class lensingProbabilityDistribution():
         self.probabilityLensingByLss = \
           {'x':magnitudes+self.meanMagnification, 'y':PDF}
 
-    
+     
     def getProbabilityLensingByLssForGivenMagnitude( self, magnitudeList ):
         '''
         For a list of magnitudes, mu find where for each
@@ -237,8 +238,8 @@ class lensingProbabilityDistribution():
           np.interp( magnitudeList, self.probabilityLensingByLss['x'],\
                          self.probabilityLensingByLss['y'])
         
-    
-
+        self.probabilityLensingByLssForGivenMagnitude[ magnitudeList < \
+                                        self.probabilityLensingByLss['x'][0]] = 0.
 
     def plotTotalProbabilityDistribution(self, show=False):
         '''

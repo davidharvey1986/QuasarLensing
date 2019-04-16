@@ -9,7 +9,7 @@ import deltaTable as dt
 import os as os
 import pickle as pkl
 import lensingProbabilityDistributionLog as Loglpd
-import lensingProbabilityDistributionLog as lpd
+import lensingProbabilityDistribution as lpd
 
 
 def main(z=1.0, nMu=1000):

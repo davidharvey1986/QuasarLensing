@@ -21,7 +21,7 @@ def exampleEquivalentWidthConvolutedWithLensingAndCompared():
     #currently only for z=1., and alpha=0.83
     #future models will sample these two paraemeters to find
     #the best fitting for the observed tomorgraphic sampels
-    alphaList = [0.,0.3,0.5,0.83]
+    alphaList = [0.1,0.3,0.5,0.83]
     for i in alphaList:
     #initiate the class
         emissionLineCl = emissionLine('NARROW_HB', nRedshiftBins=2)
@@ -199,3 +199,7 @@ def compareCats():
 
 
     plt.savefig('CompareDR12toDR9.pdf')
+
+
+if __name__ == '__main__':
+    exampleEquivalentWidthConvolutedWithLensingAndCompared()
