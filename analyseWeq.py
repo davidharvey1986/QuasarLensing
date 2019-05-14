@@ -3,6 +3,7 @@ import numpy as np
 import pyfits as fits
 import lensing as lensing
 from emissionLine import *
+import sys
 
 def exampleEquivalentWidthConvolutedWithLensingAndCompared():
     '''
@@ -21,12 +22,13 @@ def exampleEquivalentWidthConvolutedWithLensingAndCompared():
     #currently only for z=1., and alpha=0.83
     #future models will sample these two paraemeters to find
     #the best fitting for the observed tomorgraphic sampels
+    
     alphaList = [0.1,0.3,0.5,0.83]
-    for i in alphaList:
+    for index, iAlpha in enumerate(alphaList):
     #initiate the class
         emissionLineCl = emissionLine('NARROW_HB', nRedshiftBins=2)
 
-        emissionLineCl.getLensingProbability( z=1.0, alpha=i )
+        emissionLineCl.getLensingProbability( z=1.0, alpha=iAlpha )
 
     #get what i am calling the intrinsic distribution of HB narrow EQ
     #this can be discussed.the redshift cut determines thoise quasars
@@ -45,17 +47,21 @@ def exampleEquivalentWidthConvolutedWithLensingAndCompared():
     #plot the resulting convolution
         plt.plot(emissionLineCl.predictedLensedEquivalentWidthDistribution['x'],\
                     emissionLineCl.predictedLensedEquivalentWidthDistribution['y'], \
-                    label=r'$\alpha=%0.2f$' % i)
+                    label=r'$\alpha=%0.2f$' % iAlpha)
         print np.sum(emissionLineCl.predictedLensedEquivalentWidthDistribution['x']*\
                          emissionLineCl.predictedLensedEquivalentWidthDistribution['y']*\
                          emissionLineCl.dEquivalentWidth)
-    plt.legend(loc=2, prop={'size': 6})
-    plt.ylim(0,3.)
 
-    plt.xlim(-0.7,0.7)
-    plt.plot([0,0],[0,10],'--')
-    plt.xlabel(r'$\Delta$m')
-    plt.savefig('Figure2Bellido.pdf')
+        if index == len(alphaList)-1:
+            plt.plot(emissionLineCl.intrinsicEquivalentWidthDistribution['x'],\
+                         emissionLineCl.intrinsicEquivalentWidthDistribution['y'], label='Intrinsic Distribution')
+    plt.legend(loc=2, prop={'size': 6})
+    plt.ylim(0,4.3)
+
+    plt.xlim(-0.5,1.0)
+
+    plt.xlabel(r'Equivalent Width')
+    plt.savefig('../plots/effectOfLensingOnEquivalentWidths.pdf')
     plt.show()
     
     
@@ -80,27 +86,38 @@ def examplePlotEquivalentWidthHistograms(  ):
 
 
     emissionLineList = ['MGII','OIII_5007','NARROW_HB']
-    fig, axarr = plt.subplots(len(emissionLineList),1)
+    emissionLineList = ['NARROW_HB']
 
-    nEquivilentWidthBins = 30
-    maxEquivilentWidth = np.array([100., 50., 20.])
+    fig, axarr = plt.subplots(len(emissionLineList),1)
+    if len(emissionLineList) == 1:
+        axarr = [axarr]
+    nEquivilentWidthBins = 10
+    maxEquivilentWidth = np.array([20.,100., 50., 20.])
+    
     for iAxis, iEmissionLine in enumerate(emissionLineList):
-        emissionLineCl = emissionLine(iEmissionLine, nRedshiftBins=2)
+        
+        emissionLineCl = emissionLine(iEmissionLine, nRedshiftBins=3)
         emissionLineCl.getEquvilentWidthMeansAsFunctionOfRedshift()
         EquivilentWidthBins = np.linspace(0., maxEquivilentWidth[iAxis], nEquivilentWidthBins)
-        emissionLineCl.cumulativeDistributionEquivalentWidth()
+
         
-        redshiftList = emissionLineCl.equivilentWidthCumSum.keys()
+        emissionLineCl.histogramEquivalentWidth(nEquivilentWidthBins=EquivilentWidthBins)
+        
+        redshiftList = emissionLineCl.equivilentWidthHistograms.keys()
         redshiftListSorted = list((np.sort(np.array(redshiftList).astype(float))).astype(str))
         for i in redshiftListSorted:
 
-            axarr[iAxis].plot(emissionLineCl.equivilentWidthCumSum[i]['x'], \
-                emissionLineCl.equivilentWidthCumSum[i]['y'], \
+            axarr[iAxis].plot(emissionLineCl.equivilentWidthHistograms[i]['x'], \
+                emissionLineCl.equivilentWidthHistograms[i]['y'], \
                       label=i)
                       
-
+        axarr[iAxis].text(0.6,0.5,iEmissionLine,  transform=axarr[iAxis].transAxes)
         axarr[iAxis].legend()
         axarr[iAxis].set_xlim(0,maxEquivilentWidth[iAxis])
+    axarr[iAxis].set_xlabel('Equivalent Width')
+    axarr[iAxis].set_ylabel('P(Equivalent Width)')
+    
+    plt.savefig('../plots/emissionLineHistogram.pdf')
     plt.show()
 
 def main( catalogue='dr9_weq.fits' ):
@@ -205,4 +222,8 @@ def compareCats():
 
 
 if __name__ == '__main__':
-    exampleEquivalentWidthConvolutedWithLensingAndCompared()
+    if len(sys.argv) == 1:
+        exampleEquivalentWidthConvolutedWithLensingAndCompared()
+    else:
+        if sys.argv[1] == 'hist':
+            examplePlotEquivalentWidthHistograms()

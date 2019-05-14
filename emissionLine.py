@@ -11,6 +11,9 @@ class emissionLine:
     '''
     log the all the data from the shen catalopgues
     in to this class which will just make things look a bit cleaner
+
+    also do all the convolution with the lensing pdfs!
+
     '''
     def __init__( self, emissionLine,\
                       minRedshift=0.1, \
@@ -183,7 +186,7 @@ class emissionLine:
         
             
         
-    def getIntrinsicDistribution( self, redshiftCut=0.3, mimicSuperNova=True):
+    def getIntrinsicDistribution( self, redshiftCut=0.3, intrinsicDistribution='Lognormal'):
         '''
         In the lensing paper they assume that the PDF of the
         lensed supernova is a Gaussian with a sigma of 0.15
@@ -212,18 +215,27 @@ class emissionLine:
           
     
         
-        if mimicSuperNova:
+        if intrinsicDistribution is not None:
             #This is purely for test purposes
-            x = np.arange(-3.0,3.0,  self.dEquivalentWidth)
-            y = norm.pdf(x, 0., 0.15)
+            if intrinsicDistribution == 'Gaussian':
+                x = np.arange(-3.0,3.0,  self.dEquivalentWidth)
+                y = norm.pdf(x, 0., 0.15)
             #these need to be symmetric otherwise, the position of the final
             #convoution is weird since the fft switches things around,
             #I could probably figure it out but for now this will do
 
             #Also if things go NaN then try making this symmetric in even or
             #odd numbers i.e. (-1,1) or (-2,2)
-            x = np.arange(-5.0, 5.0,  self.dEquivalentWidth)
-            y = rayleigh.pdf(x, 0., 1.0)
+            if intrinsicDistribution == 'Lognormal':
+                x = np.arange(-5.0, 5.0,  self.dEquivalentWidth)
+                y = rayleigh.pdf(x, 0., 0.15)
+
+            if intrinsicDistribution == 'Semi-Gaussian':
+                x = np.arange(-31.0,31.0,  self.dEquivalentWidth)
+                y = norm.pdf(x, 0., 5.0)
+                y[x < 0] = 0.
+
+                
             self.intrinsicEquivalentWidthDistribution = \
               {'y':y, 'x':x}
             return
@@ -313,26 +325,6 @@ class emissionLine:
             if len(self.lensingPDF[matchVectorsLensing]) > 0:
                 convolvedYlensing[i] = self.lensingPDF[matchVectorsLensing]
 
-                '''
-        #THe direct way i did which agrees with the fft version
-        #convolvedYtotal = np.zeros(len(convolvedX))
-
-        convolvedYtotal = np.zeros(len(convolvedX))
-        for i, xPrime in enumerate(convolvedX):
-            print i
-            convolvedYlensingCheck = np.zeros(len(convolvedX))
-            for j, jX in enumerate(convolvedX):
-                matchVectors = np.abs(self.lensingEquivalentWidth + xPrime - jX -self.dEquivalentWidth/2. ) < 1e-10
-            
-                if len(self.lensingPDF[matchVectors]) == 0:
-                    convolvedYlensingCheck[j] = 0
-                else:
-                    convolvedYlensingCheck[j] = \
-                    self.lensingPDF[ matchVectors ]
-            
-            convolvedYtotal[i] = np.sum( convolvedYlensingCheck*convolvedYintrinsic*self.dEquivalentWidth)
-         '''
-       
         #Convolve in fourier space
         convolvedYnumpy = np.fft.ifft( np.fft.fft(convolvedYintrinsic)*np.fft.fft(convolvedYlensing))
         convolvedYnumpy /= np.sum(convolvedYnumpy)*self.dEquivalentWidth
@@ -342,7 +334,6 @@ class emissionLine:
         #around 0 this gets complicated
         middleIndex = np.int(np.floor(len(convolvedYnumpy)/2.))
         convolvedYnumpy = np.append( convolvedYnumpy[ middleIndex:], convolvedYnumpy[:middleIndex])
-
 
         
         self.predictedLensedEquivalentWidthDistribution = \

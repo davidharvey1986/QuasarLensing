@@ -44,6 +44,8 @@ class lensingProbabilityDistribution():
         self.nEquivalentWidthBins = nEquivalentWidthBins
         self.getMeanMagnitude()
 
+        if alpha < 0.08:
+            raise ValueError("Alpha is too small, valid only >= 0.08")
         #to be changed to include redshift dependence:
         self.getProbabilityLensingByLss()
         self.pickleFileName = \
@@ -52,7 +54,7 @@ class lensingProbabilityDistribution():
 
         self.getDmuPrime()
         self.checkPickleFileExists()
-
+            
         if not self.boolPickleFileExists:
             self.convolvePbhPdfWithLssPdf()
 
@@ -78,6 +80,7 @@ class lensingProbabilityDistribution():
         self.pdfMean = np.sum(self.convolvedPbhPdfWithLssPdf['y']*\
                             self.convolvedPbhPdfWithLssPdf['x'])*\
                             self.dEquivalentWidth
+                            
     def getConvolvedPbhPdfWithLssPdf( self ):
         return self.convolvedPbhPdfWithLssPdf['x'], \
           self.convolvedPbhPdfWithLssPdf['y']
@@ -163,11 +166,8 @@ class lensingProbabilityDistribution():
         
         #End of the integral is formally infinity
         #so will have to curtail some point
-        endInt = 10 #Will have to do a convergence test
-        
-
-        MinNumEwPrime = np.max([10., (endInt-startInt) / self.dMuPrime])
-        MinNEwPrime = 1000
+        endInt = np.max([10., startInt*10.]) #Will have to do a convergence test
+        MinNEwPrime = 10000
         EwPrimeList = np.linspace(startInt,endInt,MinNEwPrime)[1:]
         
         self.probabilityLensedByCompactObject =  \
@@ -240,7 +240,7 @@ class lensingProbabilityDistribution():
         
         self.probabilityLensingByLssForGivenMagnitude[ magnitudeList < \
                                         self.probabilityLensingByLss['x'][0]] = 0.
-
+    
     def plotTotalProbabilityDistribution(self, show=False):
         '''
         Plot the total convovled PDF
