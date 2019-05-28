@@ -21,19 +21,32 @@ def main(z=1.0, nMu=1000):
     '''
     #seems to be valid only above 0.08
     alphaList = [0.10, 0.30, 0.50, 0.83]
-    for alpha in alphaList:
+    color = ['r','b','g','c']
+
+    for i, alpha in enumerate(alphaList):
+        logLensingPDF = \
+          lpd.lensingProbabilityDistribution( redshift=z, \
+                                              alpha=alpha, \
+                                                nEquivalentWidthBins=nMu,\
+                                                  modelType='Log')
+                                                
+                                                
+        plt.plot(logLensingPDF.convolvedPbhPdfWithLssPdf['x'], \
+                     logLensingPDF.convolvedPbhPdfWithLssPdf['y'],\
+                     label=r'$\alpha=$%0.2f' % alpha, color=color[i])
+
+      
         lensingPDF = \
           lpd.lensingProbabilityDistribution( redshift=z, \
                                               alpha=alpha, \
-                                                nEquivalentWidthBins=nMu)
+                                                nEquivalentWidthBins=nMu,\
+                                                  modelType='Linear')
                                                 
                                                 
         plt.plot(lensingPDF.convolvedPbhPdfWithLssPdf['x'], \
                      lensingPDF.convolvedPbhPdfWithLssPdf['y'],\
-                     label=r'$\alpha=$%0.2f' % alpha)
-
-      
-        
+                     '--', color=color[i])
+                     
         print lensingPDF.pdfMean
         plt.yscale('log')
         plt.ylim(0.05,130)
@@ -145,4 +158,4 @@ def testSupernovaDistribution(z=1.0,nMu=1000 ):
 
     
 if __name__ == '__main__':
-    testSupernovaDistribution()
+    main()

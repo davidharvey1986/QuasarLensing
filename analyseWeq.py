@@ -34,7 +34,7 @@ def exampleEquivalentWidthConvolutedWithLensingAndCompared():
     #this can be discussed.the redshift cut determines thoise quasars
     #that havent been lensed, but still need enough quasars to get a good
     #distribution
-        emissionLineCl.getIntrinsicDistribution( redshiftCut=0.3 )
+        emissionLineCl.getIntrinsicDistribution( redshiftCut=0.3, intrinsicDistribution= 'Semi-Gaussian' )
     
 
     #now convolve the the two together to get the expected
@@ -43,7 +43,6 @@ def exampleEquivalentWidthConvolutedWithLensingAndCompared():
         emissionLineCl.convolveIntrinsicEquivalentWidthWithLensingProbability()
 
 
-                 
     #plot the resulting convolution
         plt.plot(emissionLineCl.predictedLensedEquivalentWidthDistribution['x'],\
                     emissionLineCl.predictedLensedEquivalentWidthDistribution['y'], \
@@ -91,25 +90,31 @@ def examplePlotEquivalentWidthHistograms(  ):
     fig, axarr = plt.subplots(len(emissionLineList),1)
     if len(emissionLineList) == 1:
         axarr = [axarr]
-    nEquivilentWidthBins = 10
-    maxEquivilentWidth = np.array([20.,100., 50., 20.])
+    nEquivilentWidthBins = 20
+    maxEquivilentWidth = np.array([40.,100., 50., 20.])
     
     for iAxis, iEmissionLine in enumerate(emissionLineList):
         
         emissionLineCl = emissionLine(iEmissionLine, nRedshiftBins=3)
+        emissionLineCl.applyLuminosityCut( luminosityCut=10)
         emissionLineCl.getEquvilentWidthMeansAsFunctionOfRedshift()
-        EquivilentWidthBins = np.linspace(0., maxEquivilentWidth[iAxis], nEquivilentWidthBins)
+        EquivilentWidthBins = \
+          np.linspace(0., maxEquivilentWidth[iAxis], nEquivilentWidthBins)
 
         
         emissionLineCl.histogramEquivalentWidth(nEquivilentWidthBins=EquivilentWidthBins)
         
         redshiftList = emissionLineCl.equivilentWidthHistograms.keys()
-        redshiftListSorted = list((np.sort(np.array(redshiftList).astype(float))).astype(str))
+        redshiftListSorted = \
+          list((np.sort(np.array(redshiftList).astype(float))).astype(str))
+          
         for i in redshiftListSorted:
-
+            
             axarr[iAxis].plot(emissionLineCl.equivilentWidthHistograms[i]['x'], \
-                emissionLineCl.equivilentWidthHistograms[i]['y'], \
-                      label=i)
+                    emissionLineCl.equivilentWidthHistograms[i]['y'], \
+                    label=i)
+
+            
                       
         axarr[iAxis].text(0.6,0.5,iEmissionLine,  transform=axarr[iAxis].transAxes)
         axarr[iAxis].legend()

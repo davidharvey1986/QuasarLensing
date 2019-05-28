@@ -166,8 +166,9 @@ class lensingProbabilityDistribution():
         
         #Get the end of the integral, but to stop
         #it going on forvere i curtail it here.
-        endInt = 1. / (2.*(1.-self.alpha))
-        
+        startInt = 0.
+        endInt = np.min([kappa / (1.-self.alpha), 10.])
+
         #dMuPrime = endInt/nInt
         #dMuPrime should be the P_LSS one as this defines min
         #Does this need to be changed?
@@ -175,11 +176,13 @@ class lensingProbabilityDistribution():
         MinNkappaPrime = np.max([10., endInt / self.dKappaPrime])
         KappaPrimeList = np.linspace(0., endInt, MinNkappaPrime)[1:-1]
         
-        self.probabilityLensedByCompactObject =  \
-          dt.getPdfPBH(  amplification*(1 - 2.*KappaPrimeList*(1.-self.alpha)), \
-                             self.alpha*KappaPrimeList*2. )
+        #self.probabilityLensedByCompactObject =  \
+        #  dt.getPdfPBH(  amplification*(1 - 2.*KappaPrimeList*(1.-self.alpha)), \
+        #                     self.alpha*KappaPrimeList*2. )
 
-        
+        self.probabilityLensedByCompactObject =  \
+          dt.getPdfPBH(  (kappa - KappaPrimeList*(1.-self.alpha))*2., \
+                             self.alpha*KappaPrimeList*2. )
         #
         self.getProbabilityLensingByLssForGivenKappa(KappaPrimeList)
                                 
@@ -191,7 +194,7 @@ class lensingProbabilityDistribution():
         #this extra term comes from the fact that we now use
         #logs
         
-        extraTerm = (1.-(1.-self.alpha)*KappaPrimeList)
+        extraTerm = (1.-(1.-self.alpha)*2.*KappaPrimeList)
         self.totalProbabilityForGivenAmplification = np.sum(self.dP_L*extraTerm)
 
         index = self.totalLensingPDFamplifications == amplification
@@ -210,7 +213,7 @@ class lensingProbabilityDistribution():
         
         self.getProbabilityLensingByLss()
         self.dKappaPrime = (self.probabilityLensingByLss['x'][1]-\
-                    self.probabilityLensingByLss['x'][0]) / 16.
+                    self.probabilityLensingByLss['x'][0]) / 32.
 
 
 
