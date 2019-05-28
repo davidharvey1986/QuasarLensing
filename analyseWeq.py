@@ -34,7 +34,7 @@ def exampleEquivalentWidthConvolutedWithLensingAndCompared():
     #this can be discussed.the redshift cut determines thoise quasars
     #that havent been lensed, but still need enough quasars to get a good
     #distribution
-        emissionLineCl.getIntrinsicDistribution( redshiftCut=0.3, intrinsicDistribution= 'Semi-Gaussian' )
+        emissionLineCl.getIntrinsicDistribution( redshiftCut=0.3, intrinsicDistribution= 'data' )
     
 
     #now convolve the the two together to get the expected

@@ -257,7 +257,7 @@ class emissionLine:
 
             #Also if things go NaN then try making this symmetric in even or
             #odd numbers i.e. (-1,1) or (-2,2)
-        if intrinsicDistribution == 'Lognormal':
+        if intrinsicDistribution == 'Rayleigh':
             x = np.arange(-5.0, 5.0,  self.dEquivalentWidth)
             y = rayleigh.pdf(x, 0., 0.15)
 
@@ -270,21 +270,17 @@ class emissionLine:
         
         if intrinsicDistribution == 'data':
             #Get the data
-            self.intrinsicEquivalentWidths =  self.restFrameEquivilentWidth[ self.redshift < redshiftCut ]
+            self.intrinsicEquivalentWidths =  \
+              self.restFrameEquivilentWidth[ (self.redshift < redshiftCut) &\
+                                (np.log10(self.restFrameEquivilentWidth) >-2) &\
+                                (np.log10(self.restFrameEquivilentWidth) <2) ]
+                                            
             
-            
-            equivalentWidthBins = np.arange(np.min(self.intrinsicEquivalentWidths),\
-                                            np.max(self.intrinsicEquivalentWidths), \
-                                            self.dEquivalentWidth)
-            
-        #this might not work as the data is not well sampled enough
-        #i might need to bin it coarse and simply sub-sample it into smaller bins
-        
-               
-            y, xBins = np.histogram( self.intrinsicEquivalentWidths, density=True)
-                                 
-            x = (xBins[1:] + xBins[:-1])/2.
+            params = norm.fit( np.log10(self.intrinsicEquivalentWidths))
+            x = np.arange(-3., 3., self.dEquivalentWidth)
 
+            y = norm.pdf( x, *params)
+            
             
         self.intrinsicEquivalentWidthDistribution = \
           {'y':y, 'x':x}
