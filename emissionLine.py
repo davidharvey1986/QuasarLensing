@@ -8,6 +8,8 @@ import lensingProbabilityDistribution as lpd
 import ipdb as pdb
 from matplotlib import pyplot as plt
 from scipy.optimize import curve_fit
+import fitPBHdistribution as fitPBH
+
 class emissionLine:
     '''
     log the all the data from the shen catalopgues
@@ -218,7 +220,6 @@ class emissionLine:
         for iRedshiftBin in self.equivilentWidthHistograms.keys():
 
             params = gaussFit( self.equivilentWidthHistograms[iRedshiftBin] )
-            print params
             logNormalParameters[ iRedshiftBin ] = params
 
         self.logNormalParameters =logNormalParameters
@@ -235,6 +236,7 @@ class emissionLine:
             y = gauss( np.log10(x), *self.logNormalParameters[ iRedshiftBin ])
 
             ax = plt.gca()
+            print plottingParams['color']
             ax.plot(x,y, **plottingParams)
             
         
@@ -327,7 +329,7 @@ class emissionLine:
           {'y':y, 'x':x}
 
 
-    def getLensingProbability( self, z=1.0, alpha=0.83 ):
+    def getLensingProbability( self, z=1.0, alpha=0.83, omegaM=0.30 ):
         '''
         I need to the probability distrubtion that a quasar
         of redshift z is magnified or demagnified by large scale
@@ -347,6 +349,7 @@ class emissionLine:
         lensingPDF = \
           lpd.lensingProbabilityDistribution( redshift=z, \
                                               alpha=alpha, \
+                                              omega_m=omegaM,
                                               nEquivalentWidthBins=1000,\
                                               modelType='Linear')
        
@@ -362,11 +365,18 @@ class emissionLine:
         self.alpha=alpha
 
         self.lensingEquivalentWidth = \
-          self.lensingEquivalentWidth[ self.lensingPDF > 0] + self.dEquivalentWidth/4.
+          self.lensingEquivalentWidth[ self.lensingPDF > 0] 
           
         self.lensingPDF = self.lensingPDF[ self.lensingPDF > 0 ]
 
-        
+        self.lensingProbability = { 'x':self.lensingEquivalentWidth, 'y':self.lensingPDF }
+
+
+    def interpolatePDF( self, x, pdf ):
+
+        returnInterp =  np.interp( x, pdf['x'], pdf['y'] )
+        returnInterp[ (x < pdf['x'][0]) |  (x > pdf['x'][-1]) ] = 0
+        return returnInterp
     
     def convolveIntrinsicEquivalentWidthWithLensingProbability(self):
         '''
@@ -378,46 +388,45 @@ class emissionLine:
         
         Using tge fft directly is the best way
         '''
-        nTotalXbins = len(self.lensingEquivalentWidth)+\
-          len(self.intrinsicEquivalentWidthDistribution['x']) - 1
+        nTotalXbins = (len(self.lensingEquivalentWidth)+\
+          len(self.intrinsicEquivalentWidthDistribution['x']) - 1)
 
         startValue = self.intrinsicEquivalentWidthDistribution['x'][0] - \
-          np.ceil(len(self.lensingEquivalentWidth)/2.)*self.dEquivalentWidth 
+          np.ceil(len(self.lensingEquivalentWidth)/2.)*self.dEquivalentWidth
 
         #Create a common axis for the two distributions
-        convolvedX = np.arange(0.,nTotalXbins)*self.dEquivalentWidth + \
+        observedEquivalentWidth = np.arange(0.,nTotalXbins)*self.dEquivalentWidth + \
           startValue
-          
-        convolvedYintrinsic = np.zeros(len(convolvedX))
-        convolvedYlensing = np.zeros(len(convolvedX))
-
-        for i, iX in enumerate(convolvedX):
-            matchVectors = np.abs(self.intrinsicEquivalentWidthDistribution['x'] - iX) < 1e-10
-            matchVectorsLensing = \
-              np.abs(self.lensingEquivalentWidth - iX) < 1e-10
-
-            if len(self.intrinsicEquivalentWidthDistribution['y'][matchVectors]) > 0:
-                convolvedYintrinsic[i] = \
-                  self.intrinsicEquivalentWidthDistribution['y'][matchVectors ]
-            if len(self.lensingPDF[matchVectorsLensing]) > 0:
-                convolvedYlensing[i] = self.lensingPDF[matchVectorsLensing]
-
-        #Convolve in fourier space
-        convolvedYnumpy = np.fft.ifft( np.fft.fft(convolvedYintrinsic)*np.fft.fft(convolvedYlensing))
+        dEW = observedEquivalentWidth[1] - observedEquivalentWidth[0]
+        totalConvolved = np.zeros(nTotalXbins)
         
-        convolvedYnumpy /= np.sum(convolvedYnumpy)*self.dEquivalentWidth
+        for iBinInConv, iObservedEquivWidth in enumerate(observedEquivalentWidth):
+
+            probabilityIntrinsicEquivalentWidth = \
+              self.interpolatePDF( observedEquivalentWidth, self.intrinsicEquivalentWidthDistribution)
+
+            probabilityLensingKernel = \
+              self.interpolatePDF( iObservedEquivWidth - observedEquivalentWidth, \
+                                      self.lensingProbability)
+
+            
+            totalConvolved[iBinInConv] = np.sum( probabilityIntrinsicEquivalentWidth * probabilityLensingKernel * dEW)
+
         
-        #so the fft switches the negative and positive bits around
-        #so switch it back through the middle, however if the intrinsic distribution is not symmetric
-        #around 0 this gets complicated
-        middleIndex = np.int(np.floor(len(convolvedYnumpy)/2.))
-        convolvedYnumpy = np.append( convolvedYnumpy[ middleIndex:], \
-                                        convolvedYnumpy[:middleIndex])
-
-
         self.predictedLensedEquivalentWidthDistribution = \
-          {'x':convolvedX,  'y': np.real(convolvedYnumpy)}
-                             
+          {'x':observedEquivalentWidth,  'y': totalConvolved}
+
+
+    def getInterplationFromIntrinsic( self ):
+        
+        fittedDist  = fittedPBHdistribution( logNormalParams=self.logNormalParameters[0])
+        fittedDist.loadTrueDistributions()
+
+        fittedDist.interpolateDistribution()
+        self.fittedDist = fittedDist
+
+    def predictProbability( self, equivalentWidth, alpha):
+        return self.fittedDist.predictDistribution(equivalentWidth, alpha)
         
 def gauss(x, *p):
     A, mu, sigma = p

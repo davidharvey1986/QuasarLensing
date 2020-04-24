@@ -11,7 +11,7 @@ import numpy as np
 import sys
 import ipdb as pdb
 from predictDeltaAndNormalisation import *
-
+from scipy.interpolate import interp1d
 def deltaTable():
 
 
@@ -35,19 +35,30 @@ def deltaTable():
                  open('deltaTable.pkl','wb'))
 
 
-def getDelta( z=1.0, meanMag=None):
+def getDelta( z=1.0, meanMag=None, omega_m=0.30, sigma_8=0.9):
     
     '''
     Derive the delta for the PBH 
     '''
 
     if meanMag is None:
-        meanMag = pm.getMeanMag( z )
+        meanMag = pm.getMeanMag( z, omega_m=omega_m, sigma_8=sigma_8 )
 
     deltaList, magnitudes, norm = pkl.load(open('deltaTable.pkl','rb'))
 
-    delta = deltaList[ np.argmin( np.abs( magnitudes - meanMag))]
+    logDeltaList = np.log10(deltaList)
+    logMagnitudes = np.log10(magnitudes)
 
+    extrapFunction = \
+      interp1d( logMagnitudes, logDeltaList, \
+                            fill_value="extrapolate")
+
+    logDelta = 10**extrapFunction(np.log10(meanMag))
+
+    
+    delta = 10**logDelta
+    #delta = deltaList[ np.argmin( np.abs( magnitudes - meanMag))]
+    #pdb.set_trace()
     return delta
     
     

@@ -12,8 +12,11 @@ import lensingProbabilityDistributionLog as Loglpd
 import lensingProbabilityDistribution as lpd
 import lensingProbabilityDistributionForSupernova as supernova
 from matplotlib import gridspec 
+from matplotlib import colors as colors
+import matplotlib.cm as cmx
+from matplotlib import rc
 
-def main(z=1.0, nMu=1000):
+def main(z=1.0, nMu=1000, nOmegaM=10):
     '''
     Under the linear taylor expansion assumption
     this works out the equivalent widths for different
@@ -23,21 +26,38 @@ def main(z=1.0, nMu=1000):
     alphaList = [0.10, 0.30, 0.50, 0.83]
     color = ['r','b','g','c']
 
-    for i, alpha in enumerate(alphaList):
+    colorMaps = ['Reds','Greens','Blues','Purples']
+                                                                          
+
+
+    sigmaEightList = [0.7, 0.8288, 0.9]
+    omegaMatterList = np.linspace(0.1,1.,nOmegaM)
+    omegaMatterList = [0.19, 0.3, 0.43]
+
+    for j, alpha in enumerate(alphaList):
+           #For aesthetics                                                         
+        jet = cm = plt.get_cmap(colorMaps[j])
+        cNorm  = colors.Normalize(vmin=-1, vmax=3+1)
+        scalarMap = cmx.ScalarMappable(norm=cNorm, cmap=jet)
+        ##### 
+        for i, omega_m in enumerate(omegaMatterList):
        
                         
 
       
-        lensingPDF = \
-          lpd.lensingProbabilityDistribution( redshift=z, \
+            lensingPDF = \
+              lpd.lensingProbabilityDistribution( redshift=z, \
                                               alpha=alpha, \
+                                              omega_m=omega_m, \
                                                 nEquivalentWidthBins=nMu,\
                                                   modelType='Linear')
                                                 
                                                 
-        plt.plot( lensingPDF.convolvedPbhPdfWithLssPdf['x'], \
+            plt.plot( lensingPDF.convolvedPbhPdfWithLssPdf['x'], \
                      lensingPDF.convolvedPbhPdfWithLssPdf['y'],\
-                     '-', color=color[i], label=r'$\alpha=%0.2f$' % alpha)
+                     '-', color=scalarMap.to_rgba(i), alpha=1., \
+                      label=r'$\Omega_m=%0.2f$, $\alpha=%0.2f$' % \
+                          (omega_m, alpha))
                      
         print lensingPDF.pdfMean
         plt.yscale('log')
@@ -47,7 +67,7 @@ def main(z=1.0, nMu=1000):
     plt.xlabel(r'log$(1+\mu_{\rm EW})$')
     plt.ylabel(r'$P($log$(1.+\mu_{\rm EW}))$')
     plt.legend()
-    plt.savefig('../plots/quasarConvolution.pdf')
+    plt.savefig('../plots/quasarConvolutionOmegaM.pdf')
     plt.show()
 
     

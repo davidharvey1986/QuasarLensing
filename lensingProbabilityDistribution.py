@@ -27,7 +27,8 @@ class lensingProbabilityDistribution():
     '''
 
     
-    def __init__( self, redshift=1.0, alpha=0., nEquivalentWidthBins=1000,\
+    def __init__( self, omega_m=0.30, sigma8=0.8288, redshift=1.0, \
+                      alpha=0., nEquivalentWidthBins=1000,\
                       modelType='Linear'):
         '''
         This distribution is a function of two parameters
@@ -41,8 +42,11 @@ class lensingProbabilityDistribution():
 
         It has been adapted to rerturn log(1+mu_ew)
         '''
+        self.omega_m = omega_m
+        self.sigma8 = sigma8
         self.modelType = modelType
-        self.delta = dt.getDelta(redshift)
+        self.delta = \
+          dt.getDelta(redshift,omega_m=omega_m, sigma_8=sigma8)
         self.redshift = redshift
         self.alpha = alpha
         self.nEquivalentWidthBins = nEquivalentWidthBins
@@ -53,8 +57,9 @@ class lensingProbabilityDistribution():
         #to be changed to include redshift dependence:
         self.getProbabilityLensingByLss()
         self.pickleFileName = \
-          'pickles/PL_EW_'+self.modelType+'_%0.1f_%0.2f_%i.pkl' % \
-          (redshift,alpha,nEquivalentWidthBins)
+          'pickles/PL_EW_%s_%0.1f_%0.2f_%0.4f_%0.2f_%i.pkl' % \
+          (self.modelType,redshift,omega_m,sigma8,\
+               alpha,nEquivalentWidthBins)
 
         self.getDmuPrime()
         self.checkPickleFileExists()
@@ -217,7 +222,10 @@ class lensingProbabilityDistribution():
         to match the PBH PDF range.
         '''
 
-        TurboGLfile = 'TurboGL.dat'
+        TurboGLfile = \
+          '../turboGL3.0/results/hpdf_z_%0.1f_OM_%0.1f_S8_%0.1f.dat' %\
+          (self.redshift,self.omega_m, self.sigma8)
+
         magnitudes, PDF = np.loadtxt(TurboGLfile, unpack=True)
         
         self.probabilityLensingByLss = \

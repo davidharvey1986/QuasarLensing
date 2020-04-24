@@ -50,13 +50,13 @@ def getInversePDF( z ):
 
     return InvMag[1:], inverse[1:], dMag[1:]
 
-def getDelta(z, meanMag=None):
+def getDelta(z, meanMag=None, omegaM=0.30):
     '''
     get the delta of the pdf in the normal version
     '''
     deltaList = np.linspace(0.,2,1000)
     if meanMag is None:
-        meanMag = getMeanMag( z )
+        meanMag = getMeanMag( z, omegaM=omegaM )
 
     expecMag = []
     
@@ -216,15 +216,18 @@ def plotPBHpdf():
 
 
 
-def getMeanMag( z, dz=1e-4):
+def getMeanMag( z, dz=1e-4, omega_m=0.30, sigma_8=0.9):
     #return 0.1311
-    cosmo = {'omega_M_0' : 0.3086, 'omega_lambda_0' : 0.6914, 'h' : 0.6777}
+    cosmo = {'omega_M_0' : omega_m, \
+            'omega_lambda_0' : 0.6914, \
+            'h' : 0.6777, \
+            'sigma_8':sigma_8}
     cosmo = dist.set_omega_k_0(cosmo)
     distanceEB = 0
     distanceFB = 0
     for i in np.arange(0.,z,dz):
         dist_hz = dist.hubble_distance_z(i, **cosmo)
-
+        
         distanceEB += dz*dist_hz/(1+i)**2
 
         distanceFB += dz*dist_hz

@@ -26,15 +26,18 @@ def exampleEquivalentWidthConvolutedWithLensingAndCompared():
     EquivilentWidthBins =  10**np.linspace(-3, 3, 30)
 
     alphaList = [0.1,0.3,0.5,0.83]
+    omegaMatter = [0.2, 0.3, 0.4]
+
     gs = gridspec.GridSpec( 5, 1)
     axis1 = plt.subplot(gs[:,0])
     
     
-    for index, iAlpha in enumerate(alphaList):
+    for index, iOmega_M in enumerate(omegaMatter):
     #initiate the class
-        emissionLineCl = emissionLine('NARROW_HB', nRedshiftBins=2macs )
+        emissionLineCl = emissionLine('NARROW_HB', nRedshiftBins=2 )
 
-        emissionLineCl.getLensingProbability( z=1.0, alpha=iAlpha )
+        emissionLineCl.getLensingProbability( z=1.0, alpha=0.83,\
+                                            omegaM=iOmega_M )
         emissionLineCl.applyLuminosityCut( luminosityCut=10.)
         emissionLineCl.getEquvilentWidthMeansAsFunctionOfRedshift()
 
@@ -55,11 +58,13 @@ def exampleEquivalentWidthConvolutedWithLensingAndCompared():
         emissionLineCl.convolveIntrinsicEquivalentWidthWithLensingProbability()
 
 
+
+        
     #plot the resulting convolution
         axis1.plot(emissionLineCl.predictedLensedEquivalentWidthDistribution['x'],\
                     emissionLineCl.predictedLensedEquivalentWidthDistribution['y'], \
-                    label=r'$\alpha=%0.2f$' % iAlpha)
-        #Since the pdfs have different x values if i want to compare, i need
+                    label=r'$\Omega_M=%0.2f$' % iOmega_M)
+                    #Since the pdfs have different x values if i want to compare, i need
         #to interpolate between them
      
 
@@ -69,7 +74,7 @@ def exampleEquivalentWidthConvolutedWithLensingAndCompared():
     plt.legend(loc=2, prop={'size': 6})
 #    plt.ylim(0,4.3)
 
-    axis1.set_xlim(-2,2.5)
+    axis1.set_xlim(-2,3.5)
     axis1.set_ylim(0.0001,2.)
     axis1.set_yscale('log')
     plt.xlabel(r'log(Equivalent Width)')
@@ -106,12 +111,12 @@ def examplePlotEquivalentWidthHistograms(  ):
         axarr = [axarr]
     nEquivilentWidthBins = 30
     maxEquivilentWidth = np.array([1000.,100., 50., 20.])
-    luminosityCuts = np.linspace( 8,10,5)
+    luminosityCuts = [8.] #np.linspace( 8,10,5)
     color=['r','b','g','c','orange']
-    for iColor, iLuminosityCut in enumerate(luminosityCuts):
+    for iColorLum, iLuminosityCut in enumerate(luminosityCuts):
         for iAxis, iEmissionLine in enumerate(emissionLineList):
         
-            emissionLineCl = emissionLine(iEmissionLine, nRedshiftBins=1)
+            emissionLineCl = emissionLine(iEmissionLine, nRedshiftBins=4)
             emissionLineCl.applyLuminosityCut( luminosityCut=iLuminosityCut)
 
             emissionLineCl.getEquvilentWidthMeansAsFunctionOfRedshift()
@@ -126,15 +131,15 @@ def examplePlotEquivalentWidthHistograms(  ):
             redshiftList = emissionLineCl.equivilentWidthHistograms.keys()
             redshiftListSorted = \
               list((np.sort(np.array(redshiftList).astype(float))).astype(str))
-            
-            for iRedshift in redshiftListSorted:
+
+            for iColor, iRedshift in enumerate(redshiftListSorted):
             
                 axarr[iAxis].plot(emissionLineCl.equivilentWidthHistograms[iRedshift]['x'], \
                     emissionLineCl.equivilentWidthHistograms[iRedshift]['y'], \
-                    label=iLuminosityCut, color=color[iColor])
+                    label=str(iRedshift), color=color[iColor])
                 
                 emissionLineCl.plotLogGaussianFitEquivalentWidths(iRedshift,\
-                                                    **{'color':color[iColor],'ls':'--'})
+                                        **{'color':color[iColor],'ls':'--'})
 
                       
             axarr[iAxis].text(0.1,0.5,iEmissionLine,  transform=axarr[iAxis].transAxes)
