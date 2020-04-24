@@ -38,6 +38,8 @@ class lensingProbabilityDistribution():
         nEquivalentWidthBins : the number of equvalent width bins 
                   that the code will calcualte te convolution 
                   at and the final PDF is sampled at. Default = 1000
+
+        It has been adapted to rerturn log(1+mu_ew)
         '''
         self.modelType = modelType
         self.delta = dt.getDelta(redshift)
@@ -62,7 +64,6 @@ class lensingProbabilityDistribution():
 
             self.writeToPickleFile()
 
-        #self.getConvolvedPbhPdfWithLssPdf()
             
         self.normalisePDF()
         self.getPDFmean()
@@ -82,9 +83,10 @@ class lensingProbabilityDistribution():
         
         self.totalConvolvedPbhPdfWithLssPdf = \
            np.zeros(self.nEquivalentWidthBins-2)
-           
+
+        #I want to return in log(1+equivalentwidhts)
         self.totalLensingPDFequivalentWidths = \
-          np.linspace(-0.5, 0.5, self.nEquivalentWidthBins)[1:-1]
+          np.linspace(-2., 2., self.nEquivalentWidthBins)[1:-1]
           
         self.dEquivalentWidth = \
           self.totalLensingPDFequivalentWidths[1]-\
@@ -93,14 +95,22 @@ class lensingProbabilityDistribution():
         for howFarThroughList, givenEquivalentWidth \
           in enumerate(self.totalLensingPDFequivalentWidths):
             self.reportProgress(howFarThroughList)
+            self.index = howFarThroughList
             if self.modelType == 'Log':
-                self.convolveLssWithPbhForGivenEquivalentWidthInLog( givenEquivalentWidth )
+                self.convolveLssWithPbhForGivenEquivalentWidthInLog( 10**givenEquivalentWidth -1. )
             else:
-                self.convolveLssWithPbhForGivenEquivalentWidth(givenEquivalentWidth )
-        
+                #All the convolution was written in linear space
+                #So the input mu needs to be in linear mu not log
+                self.convolveLssWithPbhForGivenEquivalentWidth( 10**givenEquivalentWidth - 1. )
+       
+        #Convert the pdf to log(pdf) with the jacobian
+        self.totalConvolvedPbhPdfWithLssPdf *= \
+          (10**self.totalLensingPDFequivalentWidths)*np.log(10.)
+
         self.convolvedPbhPdfWithLssPdf =  \
             {'x':self.totalLensingPDFequivalentWidths,  \
                 'y':self.totalConvolvedPbhPdfWithLssPdf}
+            
 
 
     def convolveLssWithPbhForGivenEquivalentWidth( self, equivalentWidth ):
@@ -119,8 +129,8 @@ class lensingProbabilityDistribution():
         EwPrimeList = np.linspace(startInt,endInt,MinNEwPrime)[1:]
         
         self.probabilityLensedByCompactObject =  \
-          dt.getPdfPBH( (self.alpha*EwPrimeList-equivalentWidth)*2.,\
-                            self.alpha*EwPrimeList*2.)
+          dt.getPdfPBH( (self.alpha*EwPrimeList-equivalentWidth),\
+                            self.alpha*EwPrimeList)
 
         
         #
@@ -134,9 +144,8 @@ class lensingProbabilityDistribution():
           
         self.totalProbabilityForGivenEquivalentWidth = np.sum(self.dP_L)
 
-        index = self.totalLensingPDFequivalentWidths == equivalentWidth
         
-        self.totalConvolvedPbhPdfWithLssPdf[ index ] = \
+        self.totalConvolvedPbhPdfWithLssPdf[ self.index ] = \
           self.totalProbabilityForGivenEquivalentWidth
     
     def convolveLssWithPbhForGivenEquivalentWidthInLog( self, equivalentWidth ):
@@ -158,8 +167,8 @@ class lensingProbabilityDistribution():
         EwPrimeList = np.linspace(startInt,endInt,MinNEwPrime)[1:]
         
         self.probabilityLensedByCompactObject =  \
-          dt.getPdfPBH( (self.alpha*EwPrimeList-equivalentWidth)*2.,\
-                            self.alpha*EwPrimeList*2.)
+          dt.getPdfPBH( (self.alpha*EwPrimeList-equivalentWidth),\
+                            self.alpha*EwPrimeList)
 
         
         #
@@ -180,9 +189,8 @@ class lensingProbabilityDistribution():
         self.totalProbabilityForGivenEquivalentWidth = \
           np.sum(self.dP_L)/(1.+2.*equivalentWidth)**2
 
-        index = self.totalLensingPDFequivalentWidths == equivalentWidth
         
-        self.totalConvolvedPbhPdfWithLssPdf[ index ] = \
+        self.totalConvolvedPbhPdfWithLssPdf[ self.index ] = \
           self.totalProbabilityForGivenEquivalentWidth  
        
     def getDmuPrime(self):
@@ -209,7 +217,7 @@ class lensingProbabilityDistribution():
         to match the PBH PDF range.
         '''
 
-        TurboGLfile = 'TurboGL_Kappa.dat'
+        TurboGLfile = 'TurboGL.dat'
         magnitudes, PDF = np.loadtxt(TurboGLfile, unpack=True)
         
         self.probabilityLensingByLss = \

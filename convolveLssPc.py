@@ -24,16 +24,8 @@ def main(z=1.0, nMu=1000):
     color = ['r','b','g','c']
 
     for i, alpha in enumerate(alphaList):
-        logLensingPDF = \
-          lpd.lensingProbabilityDistribution( redshift=z, \
-                                              alpha=alpha, \
-                                                nEquivalentWidthBins=nMu,\
-                                                  modelType='Log')
-                                                
-                                                
-        plt.plot(logLensingPDF.convolvedPbhPdfWithLssPdf['x'], \
-                     logLensingPDF.convolvedPbhPdfWithLssPdf['y'],\
-                     label=r'$\alpha=$%0.2f' % alpha, color=color[i])
+       
+                        
 
       
         lensingPDF = \
@@ -43,17 +35,17 @@ def main(z=1.0, nMu=1000):
                                                   modelType='Linear')
                                                 
                                                 
-        plt.plot(lensingPDF.convolvedPbhPdfWithLssPdf['x'], \
+        plt.plot( lensingPDF.convolvedPbhPdfWithLssPdf['x'], \
                      lensingPDF.convolvedPbhPdfWithLssPdf['y'],\
-                     '--', color=color[i])
+                     '-', color=color[i], label=r'$\alpha=%0.2f$' % alpha)
                      
         print lensingPDF.pdfMean
         plt.yscale('log')
         plt.ylim(0.05,130)
-        plt.xlim(-0.6,0.6)
+        plt.xlim(-0.3,0.3)
 
-    plt.xlabel(r'$\mu_{\rm EW}$')
-    plt.ylabel(r'$P(\mu_{\rm EW})$')
+    plt.xlabel(r'log$(1+\mu_{\rm EW})$')
+    plt.ylabel(r'$P($log$(1.+\mu_{\rm EW}))$')
     plt.legend()
     plt.savefig('../plots/quasarConvolution.pdf')
     plt.show()

@@ -1,4 +1,5 @@
 from matplotlib import pyplot as plt
+from matplotlib import gridspec
 import numpy as np
 import pyfits as fits
 import lensing as lensing
@@ -22,19 +23,30 @@ def exampleEquivalentWidthConvolutedWithLensingAndCompared():
     #currently only for z=1., and alpha=0.83
     #future models will sample these two paraemeters to find
     #the best fitting for the observed tomorgraphic sampels
-    
+    EquivilentWidthBins =  10**np.linspace(-3, 3, 30)
+
     alphaList = [0.1,0.3,0.5,0.83]
+    gs = gridspec.GridSpec( 5, 1)
+    axis1 = plt.subplot(gs[:,0])
+    
+    
     for index, iAlpha in enumerate(alphaList):
     #initiate the class
-        emissionLineCl = emissionLine('NARROW_HB', nRedshiftBins=2)
+        emissionLineCl = emissionLine('NARROW_HB', nRedshiftBins=2macs )
 
         emissionLineCl.getLensingProbability( z=1.0, alpha=iAlpha )
+        emissionLineCl.applyLuminosityCut( luminosityCut=10.)
+        emissionLineCl.getEquvilentWidthMeansAsFunctionOfRedshift()
 
+        
+        emissionLineCl.histogramEquivalentWidth(nEquivilentWidthBins=EquivilentWidthBins)
+        emissionLineCl.logGaussianFitEquivalentWidths()
+        
     #get what i am calling the intrinsic distribution of HB narrow EQ
     #this can be discussed.the redshift cut determines thoise quasars
     #that havent been lensed, but still need enough quasars to get a good
     #distribution
-        emissionLineCl.getIntrinsicDistribution( redshiftCut=0.3, intrinsicDistribution= 'data' )
+        emissionLineCl.getIntrinsicDistribution( intrinsicDistribution= 'data' )
     
 
     #now convolve the the two together to get the expected
@@ -44,22 +56,24 @@ def exampleEquivalentWidthConvolutedWithLensingAndCompared():
 
 
     #plot the resulting convolution
-        plt.plot(emissionLineCl.predictedLensedEquivalentWidthDistribution['x'],\
+        axis1.plot(emissionLineCl.predictedLensedEquivalentWidthDistribution['x'],\
                     emissionLineCl.predictedLensedEquivalentWidthDistribution['y'], \
                     label=r'$\alpha=%0.2f$' % iAlpha)
-        print np.sum(emissionLineCl.predictedLensedEquivalentWidthDistribution['x']*\
-                         emissionLineCl.predictedLensedEquivalentWidthDistribution['y']*\
-                         emissionLineCl.dEquivalentWidth)
+        #Since the pdfs have different x values if i want to compare, i need
+        #to interpolate between them
+     
 
         if index == len(alphaList)-1:
-            plt.plot(emissionLineCl.intrinsicEquivalentWidthDistribution['x'],\
+            axis1.plot(emissionLineCl.intrinsicEquivalentWidthDistribution['x'],\
                          emissionLineCl.intrinsicEquivalentWidthDistribution['y'], label='Intrinsic Distribution')
     plt.legend(loc=2, prop={'size': 6})
-    plt.ylim(0,4.3)
+#    plt.ylim(0,4.3)
 
-    plt.xlim(-0.5,1.0)
-
-    plt.xlabel(r'Equivalent Width')
+    axis1.set_xlim(-2,2.5)
+    axis1.set_ylim(0.0001,2.)
+    axis1.set_yscale('log')
+    plt.xlabel(r'log(Equivalent Width)')
+    plt.ylabel(r'p(log(Equivalent Width))')
     plt.savefig('../plots/effectOfLensingOnEquivalentWidths.pdf')
     plt.show()
     
@@ -90,35 +104,44 @@ def examplePlotEquivalentWidthHistograms(  ):
     fig, axarr = plt.subplots(len(emissionLineList),1)
     if len(emissionLineList) == 1:
         axarr = [axarr]
-    nEquivilentWidthBins = 20
-    maxEquivilentWidth = np.array([40.,100., 50., 20.])
-    
-    for iAxis, iEmissionLine in enumerate(emissionLineList):
+    nEquivilentWidthBins = 30
+    maxEquivilentWidth = np.array([1000.,100., 50., 20.])
+    luminosityCuts = np.linspace( 8,10,5)
+    color=['r','b','g','c','orange']
+    for iColor, iLuminosityCut in enumerate(luminosityCuts):
+        for iAxis, iEmissionLine in enumerate(emissionLineList):
         
-        emissionLineCl = emissionLine(iEmissionLine, nRedshiftBins=3)
-        emissionLineCl.applyLuminosityCut( luminosityCut=10)
-        emissionLineCl.getEquvilentWidthMeansAsFunctionOfRedshift()
-        EquivilentWidthBins = \
-          np.linspace(0., maxEquivilentWidth[iAxis], nEquivilentWidthBins)
+            emissionLineCl = emissionLine(iEmissionLine, nRedshiftBins=1)
+            emissionLineCl.applyLuminosityCut( luminosityCut=iLuminosityCut)
+
+            emissionLineCl.getEquvilentWidthMeansAsFunctionOfRedshift()
+            EquivilentWidthBins = \
+              10**np.linspace(-3, np.log10(maxEquivilentWidth[iAxis]), nEquivilentWidthBins)
 
         
-        emissionLineCl.histogramEquivalentWidth(nEquivilentWidthBins=EquivilentWidthBins)
-        
-        redshiftList = emissionLineCl.equivilentWidthHistograms.keys()
-        redshiftListSorted = \
-          list((np.sort(np.array(redshiftList).astype(float))).astype(str))
-          
-        for i in redshiftListSorted:
-            
-            axarr[iAxis].plot(emissionLineCl.equivilentWidthHistograms[i]['x'], \
-                    emissionLineCl.equivilentWidthHistograms[i]['y'], \
-                    label=i)
+            emissionLineCl.histogramEquivalentWidth(nEquivilentWidthBins=EquivilentWidthBins)
+            emissionLineCl.logGaussianFitEquivalentWidths()
 
             
+            redshiftList = emissionLineCl.equivilentWidthHistograms.keys()
+            redshiftListSorted = \
+              list((np.sort(np.array(redshiftList).astype(float))).astype(str))
+            
+            for iRedshift in redshiftListSorted:
+            
+                axarr[iAxis].plot(emissionLineCl.equivilentWidthHistograms[iRedshift]['x'], \
+                    emissionLineCl.equivilentWidthHistograms[iRedshift]['y'], \
+                    label=iLuminosityCut, color=color[iColor])
+                
+                emissionLineCl.plotLogGaussianFitEquivalentWidths(iRedshift,\
+                                                    **{'color':color[iColor],'ls':'--'})
+
                       
-        axarr[iAxis].text(0.6,0.5,iEmissionLine,  transform=axarr[iAxis].transAxes)
-        axarr[iAxis].legend()
-        axarr[iAxis].set_xlim(0,maxEquivilentWidth[iAxis])
+            axarr[iAxis].text(0.1,0.5,iEmissionLine,  transform=axarr[iAxis].transAxes)
+            axarr[iAxis].legend()
+            axarr[iAxis].set_xscale('log')
+
+            axarr[iAxis].set_xlim(0,maxEquivilentWidth[iAxis])
     axarr[iAxis].set_xlabel('Equivalent Width')
     axarr[iAxis].set_ylabel('P(Equivalent Width)')
     
