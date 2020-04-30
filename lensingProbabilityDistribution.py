@@ -9,6 +9,7 @@ import numpy as np
 import ipdb as pdb
 
 
+
 class lensingProbabilityDistribution():
     '''
     This class contains the functions that will take an output 
@@ -27,9 +28,7 @@ class lensingProbabilityDistribution():
     '''
 
     
-    def __init__( self, omega_m=0.30, sigma8=0.8288, redshift=1.0, \
-                      alpha=0., nEquivalentWidthBins=1000,\
-                      modelType='Linear'):
+    def __init__( self, **inputParams):
         '''
         This distribution is a function of two parameters
         redshift : the redshift at which i want to calcuate the probability
@@ -41,25 +40,40 @@ class lensingProbabilityDistribution():
                   at and the final PDF is sampled at. Default = 1000
 
         It has been adapted to rerturn log(1+mu_ew)
+        
+        updated: added cosmology and inputParams now contains all
+        parameters
         '''
-        self.omega_m = omega_m
-        self.sigma8 = sigma8
-        self.modelType = modelType
+        self.inputParams = {'omega_m':0.3, 'sigma8':0.8288, \
+                'redshift':1.0, 'alpha':0.83, \
+                'nEquivalentWidthBins':1000, \
+                'modelType':'Linear'}
+        
+        for iParam in inputParams.keys():
+            if iParam not in self.inputParams.keys():
+                raise ValueError("'%s' parameter no recognised" \
+                                     % iParam)
+            print(iParam,inputParams[iParam])
+            self.inputParams[iParam] = inputParams[iParam]
+        
         self.delta = \
-          dt.getDelta(redshift,omega_m=omega_m, sigma_8=sigma8)
-        self.redshift = redshift
-        self.alpha = alpha
-        self.nEquivalentWidthBins = nEquivalentWidthBins
+          dt.getDelta(self.inputParams['redshift'],\
+                    omega_m=self.inputParams['omega_m'], \
+                    sigma_8=self.inputParams['sigma8'])
+
         self.getMeanMagnitude()
 
-        if alpha < 0.08:
+        if  self.inputParams['alpha'] < 0.08:
             raise ValueError("Alpha is too small, valid only >= 0.08")
+        
         #to be changed to include redshift dependence:
         self.getProbabilityLensingByLss()
         self.pickleFileName = \
           'pickles/PL_EW_%s_%0.1f_%0.2f_%0.4f_%0.2f_%i.pkl' % \
-          (self.modelType,redshift,omega_m,sigma8,\
-               alpha,nEquivalentWidthBins)
+          (self.inputParams['modelType'],self.inputParams['redshift'],\
+               self.inputParams['omega_m'],self.inputParams['sigma8'],\
+               self.inputParams['alpha'],\
+               self.inputParams['nEquivalentWidthBins'])
 
         self.getDmuPrime()
         self.checkPickleFileExists()
@@ -87,11 +101,12 @@ class lensingProbabilityDistribution():
         '''
         
         self.totalConvolvedPbhPdfWithLssPdf = \
-           np.zeros(self.nEquivalentWidthBins-2)
+           np.zeros(self.inputParams['nEquivalentWidthBins']-2)
 
         #I want to return in log(1+equivalentwidhts)
         self.totalLensingPDFequivalentWidths = \
-          np.linspace(-2., 2., self.nEquivalentWidthBins)[1:-1]
+          np.linspace(-2., 2., \
+                self.inputParams['nEquivalentWidthBins'])[1:-1]
           
         self.dEquivalentWidth = \
           self.totalLensingPDFequivalentWidths[1]-\
@@ -101,7 +116,7 @@ class lensingProbabilityDistribution():
           in enumerate(self.totalLensingPDFequivalentWidths):
             self.reportProgress(howFarThroughList)
             self.index = howFarThroughList
-            if self.modelType == 'Log':
+            if self.inputParams['modelType'] == 'Log':
                 self.convolveLssWithPbhForGivenEquivalentWidthInLog( 10**givenEquivalentWidth -1. )
             else:
                 #All the convolution was written in linear space
@@ -125,7 +140,7 @@ class lensingProbabilityDistribution():
         and LSS
         '''
         #Get the start of the integral
-        startInt = np.max([0,equivalentWidth/self.alpha])
+        startInt = np.max([0,equivalentWidth/self.inputParams['alpha']])
         
         #End of the integral is formally infinity
         #so will have to curtail some point
@@ -134,8 +149,9 @@ class lensingProbabilityDistribution():
         EwPrimeList = np.linspace(startInt,endInt,MinNEwPrime)[1:]
         
         self.probabilityLensedByCompactObject =  \
-          dt.getPdfPBH( (self.alpha*EwPrimeList-equivalentWidth),\
-                            self.alpha*EwPrimeList)
+          dt.getPdfPBH( (self.inputParams['alpha']*EwPrimeList-\
+                             equivalentWidth),\
+                            self.inputParams['alpha']*EwPrimeList)
 
         
         #
@@ -224,7 +240,8 @@ class lensingProbabilityDistribution():
 
         TurboGLfile = \
           '../turboGL3.0/results/hpdf_z_%0.1f_OM_%0.1f_S8_%0.1f.dat' %\
-          (self.redshift,self.omega_m, self.sigma8)
+          (self.inputParams['redshift'],\
+            self.inputParams['omega_m'], self.inputParams['sigma8'])
 
         magnitudes, PDF = np.loadtxt(TurboGLfile, unpack=True)
         
@@ -331,7 +348,8 @@ class lensingProbabilityDistribution():
         the existence of a "empty beam")
         '''
         
-        self.meanMagnification = pm.getMeanMag( self.redshift )
+        self.meanMagnification = \
+          pm.getMeanMag( self.inputParams['redshift'] )
         
     def reportProgress( self, progress):
         '''
@@ -339,6 +357,6 @@ class lensingProbabilityDistribution():
         '''
         
         sys.stdout.write("PROGRESS: %i/%i\r" \
-            %(progress+1, self.nEquivalentWidthBins-1))
+            %(progress+1, self.inputParams['nEquivalentWidthBins']-1))
         sys.stdout.flush()
         

@@ -101,7 +101,7 @@ class emissionLine:
                                " did you mean %s?" % proposedName)
                              
 
-    def applyLuminosityCut( self, luminosityCut ):
+    def applyLuminosityCut( self, luminosityCut=10. ):
         '''
         Apply a luminosity cut at a particularly emission line
         '''
@@ -183,13 +183,15 @@ class emissionLine:
 
 
 
-    def histogramEquivalentWidth(self, nEquivilentWidthBins=10):
+    def histogramEquivalentWidth(self, nEquivilentWidthBins=None):
         '''
         Hisogram each redshift bin and turn them into
         a dictionary set within a dictionary set 
         i.e. [0.1].x
 
         '''
+        if nEquivilentWidthBins is None:
+            nEquivilentWidthBins = 10**np.linspace(-3, 3, 30)
 
         self.equivilentWidthHistograms = {}
 
@@ -221,7 +223,9 @@ class emissionLine:
 
             params = gaussFit( self.equivilentWidthHistograms[iRedshiftBin] )
             logNormalParameters[ iRedshiftBin ] = params
-
+            print("Fitted lognormal gaussian parameters  "+\
+                  "amplitude:%0.2f, mean:%0.2f, scale:%0.24f" %\
+                  tuple(params))
         self.logNormalParameters =logNormalParameters
 
     
@@ -268,7 +272,7 @@ class emissionLine:
         
             
         
-    def getIntrinsicDistribution( self, intrinsicDistribution='Gaussian'):
+    def setIntrinsicDistribution( self, **intrinsicDistParams):
         '''
         In the lensing paper they assume that the PDF of the
         lensed supernova is a Gaussian with a sigma of 0.15
@@ -290,36 +294,50 @@ class emissionLine:
            therefor a Gauassian with a variance=0.15
         
         '''
-
+        #These have been derived from data
+        self.intrinsicDistParams = \
+          {'type':'LogNormal', 'mean':0.84, 'scale':0.3}
+        for iParam in intrinsicDistParams.keys():
+            self.intrinsicDistParams[iParam] = \
+              intrinsicDistParams[iParam]
         
 
         #This is purely for test purposes
-        if intrinsicDistribution == 'Gaussian':
+        if self.intrinsicDistParams['type'] == 'LogNormal':
             x = np.arange(-3.0,3.0,  self.dEquivalentWidth)
-            y = norm.pdf(x, 0., 0.15)
+            y = norm.pdf(x,  self.intrinsicDistParams['mean'],  \
+                            self.intrinsicDistParams['scale'])
             #these need to be symmetric otherwise, the position of the final
             #convoution is weird since the fft switches things around,
             #I could probably figure it out but for now this will do
 
             #Also if things go NaN then try making this symmetric in even or
             #odd numbers i.e. (-1,1) or (-2,2)
-        if intrinsicDistribution == 'Rayleigh':
+        if self.intrinsicDistParams['type'] == 'Rayleigh':
             x = np.arange(-5.0, 5.0,  self.dEquivalentWidth)
-            y = rayleigh.pdf(x, 0., 0.15)
+            y = rayleigh.pdf(x, 0., self.intrinsicDistParams['scale'])
 
-        if intrinsicDistribution == 'Semi-Gaussian':
+        if self.intrinsicDistParams['type'] == 'Semi-Gaussian':
             x = np.arange(-31.0,31.0,  self.dEquivalentWidth)
-            y = norm.pdf(x, 0., 5.0)
+            y = norm.pdf(x, 0., self.intrinsicDistParams['scale'])
             y[x < 0] = 0.
-
                 
-        
-        if intrinsicDistribution == 'data':
-            #Get the data
-         
+ 
+
+            dX = x[1]-x[0]
+            y /= np.sum(y*dX)
+            
+        if self.intrinsicDistParams['type'] == 'data':
+            #Get the data and fit to it
+            self.applyLuminosityCut( )
+            self.getEquvilentWidthMeansAsFunctionOfRedshift()
+            self.histogramEquivalentWidth()
+            self.logGaussianFitEquivalentWidths()
+            
             x = np.arange(-3, 3, self.dEquivalentWidth)
             redshift = np.sort(np.array(self.logNormalParameters.keys()))[0]
-            print("Intrincsic distrinbution of quasars are in the redshift range <%s" %redshift)
+            print("Intrincsic distrinbution of quasars are "+\
+                      "in the redshift range <%s" %redshift)
             y = gauss( x, * self.logNormalParameters[redshift])
             
             dX = x[1]-x[0]
@@ -329,7 +347,7 @@ class emissionLine:
           {'y':y, 'x':x}
 
 
-    def getLensingProbability( self, z=1.0, alpha=0.83, omegaM=0.30 ):
+    def setLensingProbability( self, **inputParams ):
         '''
         I need to the probability distrubtion that a quasar
         of redshift z is magnified or demagnified by large scale
@@ -347,11 +365,7 @@ class emissionLine:
         '''
         #TO DO This needs to be checked this funcion.
         lensingPDF = \
-          lpd.lensingProbabilityDistribution( redshift=z, \
-                                              alpha=alpha, \
-                                              omega_m=omegaM,
-                                              nEquivalentWidthBins=1000,\
-                                              modelType='Linear')
+          lpd.lensingProbabilityDistribution( **inputParams )
        
 
         self.dEquivalentWidth = lensingPDF.dEquivalentWidth
@@ -362,14 +376,15 @@ class emissionLine:
           lensingPDF.convolvedPbhPdfWithLssPdf['x'] 
         #times the dEW / dKappa
         self.lensingPDF = lensingPDF.convolvedPbhPdfWithLssPdf['y']
-        self.alpha=alpha
+        self.alpha=lensingPDF.inputParams['alpha']
 
         self.lensingEquivalentWidth = \
           self.lensingEquivalentWidth[ self.lensingPDF > 0] 
           
         self.lensingPDF = self.lensingPDF[ self.lensingPDF > 0 ]
 
-        self.lensingProbability = { 'x':self.lensingEquivalentWidth, 'y':self.lensingPDF }
+        self.lensingProbability = \
+          { 'x':self.lensingEquivalentWidth, 'y':self.lensingPDF }
 
 
     def interpolatePDF( self, x, pdf ):
@@ -395,7 +410,8 @@ class emissionLine:
           np.ceil(len(self.lensingEquivalentWidth)/2.)*self.dEquivalentWidth
 
         #Create a common axis for the two distributions
-        observedEquivalentWidth = np.arange(0.,nTotalXbins)*self.dEquivalentWidth + \
+        observedEquivalentWidth = \
+          np.arange(0.,nTotalXbins)*self.dEquivalentWidth + \
           startValue
         dEW = observedEquivalentWidth[1] - observedEquivalentWidth[0]
         totalConvolved = np.zeros(nTotalXbins)
@@ -403,14 +419,18 @@ class emissionLine:
         for iBinInConv, iObservedEquivWidth in enumerate(observedEquivalentWidth):
 
             probabilityIntrinsicEquivalentWidth = \
-              self.interpolatePDF( observedEquivalentWidth, self.intrinsicEquivalentWidthDistribution)
+              self.interpolatePDF( observedEquivalentWidth, \
+                        self.intrinsicEquivalentWidthDistribution)
 
             probabilityLensingKernel = \
-              self.interpolatePDF( iObservedEquivWidth - observedEquivalentWidth, \
+              self.interpolatePDF( iObservedEquivWidth - \
+                                    observedEquivalentWidth, \
                                       self.lensingProbability)
 
             
-            totalConvolved[iBinInConv] = np.sum( probabilityIntrinsicEquivalentWidth * probabilityLensingKernel * dEW)
+            totalConvolved[iBinInConv] = \
+              np.sum( probabilityIntrinsicEquivalentWidth * \
+                          probabilityLensingKernel * dEW)
 
         
         self.predictedLensedEquivalentWidthDistribution = \

@@ -26,7 +26,7 @@ def exampleEquivalentWidthConvolutedWithLensingAndCompared():
     EquivilentWidthBins =  10**np.linspace(-3, 3, 30)
 
     alphaList = [0.1,0.3,0.5,0.83]
-    omegaMatter = [0.2, 0.3, 0.4]
+    omegaMatter = [0.2, 0.3, 1.0]
 
     gs = gridspec.GridSpec( 5, 1)
     axis1 = plt.subplot(gs[:,0])
@@ -36,20 +36,16 @@ def exampleEquivalentWidthConvolutedWithLensingAndCompared():
     #initiate the class
         emissionLineCl = emissionLine('NARROW_HB', nRedshiftBins=2 )
 
-        emissionLineCl.getLensingProbability( z=1.0, alpha=0.83,\
-                                            omegaM=iOmega_M )
-        emissionLineCl.applyLuminosityCut( luminosityCut=10.)
-        emissionLineCl.getEquvilentWidthMeansAsFunctionOfRedshift()
-
-        
-        emissionLineCl.histogramEquivalentWidth(nEquivilentWidthBins=EquivilentWidthBins)
-        emissionLineCl.logGaussianFitEquivalentWidths()
+        emissionLineCl.setLensingProbability( redshift=1.0, alpha=0.83,\
+                                            omega_m=iOmega_M )
+                                            
+       
         
     #get what i am calling the intrinsic distribution of HB narrow EQ
     #this can be discussed.the redshift cut determines thoise quasars
     #that havent been lensed, but still need enough quasars to get a good
     #distribution
-        emissionLineCl.getIntrinsicDistribution( intrinsicDistribution= 'data' )
+        emissionLineCl.setIntrinsicDistribution( intrinsicDistribution= 'data' )
     
 
     #now convolve the the two together to get the expected

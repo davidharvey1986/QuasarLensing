@@ -23,10 +23,10 @@ def main(z=1.0, nMu=1000, nOmegaM=10):
     alphas for a given redshift of 1.0
     '''
     #seems to be valid only above 0.08
-    alphaList = [0.10, 0.30, 0.50, 0.83]
+    alphaList = [0.10, 0.20, 0.30, 0.50, 0.83]
     color = ['r','b','g','c']
 
-    colorMaps = ['Reds','Greens','Blues','Purples']
+    colorMaps = ['Reds','Greens','Blues','Purples','Oranges']
                                                                           
 
 
@@ -46,11 +46,8 @@ def main(z=1.0, nMu=1000, nOmegaM=10):
 
       
             lensingPDF = \
-              lpd.lensingProbabilityDistribution( redshift=z, \
-                                              alpha=alpha, \
-                                              omega_m=omega_m, \
-                                                nEquivalentWidthBins=nMu,\
-                                                  modelType='Linear')
+              lpd.lensingProbabilityDistribution( alpha=alpha, \
+                                              omega_m=omega_m)
                                                 
                                                 
             plt.plot( lensingPDF.convolvedPbhPdfWithLssPdf['x'], \
