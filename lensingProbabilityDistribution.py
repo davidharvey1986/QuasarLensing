@@ -50,10 +50,10 @@ class lensingProbabilityDistribution():
                 'modelType':'Linear'}
         
         for iParam in inputParams.keys():
-            if iParam not in self.inputParams.keys():
-                raise ValueError("'%s' parameter no recognised" \
-                                     % iParam)
-            print(iParam,inputParams[iParam])
+            #if iParam not in self.inputParams.keys():
+                #print("WARNING: '%s' parameter no recognised" \
+                #                     % iParam)
+
             self.inputParams[iParam] = inputParams[iParam]
         
         self.delta = \
@@ -89,7 +89,7 @@ class lensingProbabilityDistribution():
     
 
 
-    def convolvePbhPdfWithLssPdf( self ):
+    def convolvePbhPdfWithLssPdf( self, verbose=False ):
         '''
         This is where the meat of the work is done
         Here I will take a list of magnitudes at which 
@@ -114,7 +114,8 @@ class lensingProbabilityDistribution():
 
         for howFarThroughList, givenEquivalentWidth \
           in enumerate(self.totalLensingPDFequivalentWidths):
-            self.reportProgress(howFarThroughList)
+            if verbose:
+                self.reportProgress(howFarThroughList)
             self.index = howFarThroughList
             if self.inputParams['modelType'] == 'Log':
                 self.convolveLssWithPbhForGivenEquivalentWidthInLog( 10**givenEquivalentWidth -1. )

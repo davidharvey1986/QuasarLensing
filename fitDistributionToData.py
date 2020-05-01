@@ -1,33 +1,62 @@
 
 
-
+import ipdb as pdb
 import emcee
-
 import numpy as np
+from scipy.stats import norm
 
-def lnProbOfDataGivenModel( theta, xTrue, yTrue, error ):
+import pickle as pkl
+def lnProbOfDataGivenModel( theta, xTrue, yTrue, error, modelPredictor ):
 
+    #theta is a just a list, need to turn it in to a dict
+    thetaDict = {'alpha': theta[0], 'scale':theta[1]}
     theoreticalPrediction = \
-      getModelOfProbabilityDistribution( xTrue, **theta)
-      
-    priorOnParameters = getPrior( theta )
+      modelPredictor.predictPDFforParameterCombination( thetaDict, \
+                    xVector=xTrue)
+
+    priorOnParameters = \
+      getPriorOnParameters( theta, modelPredictor )
 
     likelihood = \
-      np.sum(norm.logpdf( theoreticalPrediction, yTrue, scale=error))
-    
+      np.sum(norm.logpdf( theoreticalPrediction['y'], yTrue, scale=error))
+
     posterior = priorOnParameters*likelihood
 
-       
+    
     return posterior
 
 
-def priorOnParameters():
+def getPriorOnParameters( theta, modelPredictor):
+    '''
+    For now the prior is just a flat one within the bounds
+    of the trained interpolator
+    '''
+    thetaDict = {'alpha': theta[0], 'scale':theta[1]}
+
+    prior = 1
+    
+    for iKey in thetaDict.keys():
+
+        minParam = \
+          np.min(modelPredictor.interpolateParams[iKey])
+        maxParam = \
+          np.max(modelPredictor.interpolateParams[iKey])
+        if (thetaDict[iKey] > minParam) & \
+          (thetaDict[iKey] < maxParam):
+          prior *= 1.
+        else:
+            return -np.inf
+       
+    return prior
+          
+    
+    
     return 1.
 
 
 class fitEquivalentWidthDistribution:
 
-    def __init__( self, inputProbabliltyDistirubtoin ):
+    def __init__( self, inputProbabliltyDistribution, modelClass ):
 
           
         '''
@@ -44,36 +73,42 @@ class fitEquivalentWidthDistribution:
               'y': the correspodning probabilities
               'error': error in the y values
 
+        modelClass: a class of the input model from 
+           "modelProbabilityDistributionfOfLensedEquivalentWidths.py"
+
         '''
                    
-        self.pdf = pdf
-       
-        self.fitProbabilityDistriubtion()
+        self.pdf = inputProbabliltyDistribution
+        self.modelClass = modelClass
 
     def fitProbabilityDistriubtion( self, nthreads=4, **kwargs):
 
         ### options for the sampling
         nwalkers = 20
-        ndim = 3
-        burn_len=500
-        chain_len=1000
+        ndim = len(self.modelClass.interpolateParams.keys())
+        burn_len=100
+        chain_len=2000
         #####
         
         pos0 = np.random.rand(nwalkers,ndim)
-      
+       
         args = (self.pdf['x'], self.pdf['y'], \
-            self.pdf['error'], self.hubbleInterpolator )
+            self.pdf['error'], self.modelClass )
 
         dmsampler = \
           emcee.EnsembleSampler(nwalkers, ndim, \
-                            lnprob, args=args, \
-                                    threads=nthreads)
+                            lnProbOfDataGivenModel, \
+                            args=args, \
+                            threads=nthreads)
 
-        #DO a burn in 
-        pos, prob, state  = dmsampler.run_mcmc(pos0, burn_len)
+        #DO a burn in
+        print("Burning In")
+        pos, prob, state  = dmsampler.run_mcmc(pos0, burn_len, \
+                                                   progress=True)
 
 
         #Now burnt in, do the proper sampling
+        print("Sampling")
         pos, prob, state  = dmsampler.run_mcmc(pos, chain_len,\
                                         progress=True)
 
