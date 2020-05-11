@@ -6,23 +6,24 @@ import numpy as np
 from scipy.stats import norm
 
 import pickle as pkl
-def lnProbOfDataGivenModel( theta, xTrue, yTrue, error, modelPredictor ):
+def lnProbOfDataGivenModel( theta, xTrue, yTrue,  modelPredictor ):
 
     #theta is a just a list, need to turn it in to a dict
     thetaDict = {'alpha': theta[0], 'scale':theta[1]}
-    theoreticalPrediction = \
-      modelPredictor.predictPDFforParameterCombination( thetaDict, \
-                    xVector=xTrue)
+    theoreticalPrediction = modelPredictor.predictPDFforParameterCombination( thetaDict, xVector=xTrue)
 
     priorOnParameters = \
       getPriorOnParameters( theta, modelPredictor )
 
-    likelihood = \
-      np.sum(norm.logpdf( theoreticalPrediction['y'], yTrue, scale=error))
-
-    posterior = priorOnParameters*likelihood
-
+    cumsumTheory = np.cumsum(theoreticalPrediction['y'])
+    cumsumTrue = np.cumsum(yTrue)
     
+    likelihood = 1./np.sum( (cumsumTheory - cumsumTrue)**2)*len(cumsumTrue)
+    
+    posterior = priorOnParameters*likelihood
+    #pdb.set_trace()
+    if np.isfinite(posterior) == False:
+        posterior = -np.inf
     return posterior
 
 
@@ -41,12 +42,12 @@ def getPriorOnParameters( theta, modelPredictor):
           np.min(modelPredictor.interpolateParams[iKey])
         maxParam = \
           np.max(modelPredictor.interpolateParams[iKey])
-        if (thetaDict[iKey] > minParam) & \
-          (thetaDict[iKey] < maxParam):
-          prior *= 1.
-        else:
+          
+        if thetaDict[iKey] < minParam:
             return -np.inf
-       
+        if thetaDict[iKey] > maxParam:
+            return -np.inf
+        
     return prior
           
     
@@ -89,11 +90,17 @@ class fitEquivalentWidthDistribution:
         burn_len=100
         chain_len=2000
         #####
-        
-        pos0 = np.random.rand(nwalkers,ndim)
+        #initial set up of samplers
+        pos0 = np.zeros((nwalkers,ndim))
+    
+        for iPos, iDim in \
+          enumerate(self.modelClass.interpolateParams.keys()):
+            pos0[:,iPos] = \
+              np.random.uniform(self.modelClass.interpolateParams[iDim][0],\
+                                self.modelClass.interpolateParams[iDim][-1], nwalkers)
        
         args = (self.pdf['x'], self.pdf['y'], \
-            self.pdf['error'], self.modelClass )
+             self.modelClass )
 
         dmsampler = \
           emcee.EnsembleSampler(nwalkers, ndim, \

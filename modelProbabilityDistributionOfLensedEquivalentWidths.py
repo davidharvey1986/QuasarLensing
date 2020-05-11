@@ -8,6 +8,10 @@ from scipy.interpolate import NearestNDInterpolator
 import pickle as pkl
 from matplotlib import gridspec
 import progressbar
+
+
+
+
 def main():
     '''
     Run some tests on this class, and show how the predictive works
@@ -15,17 +19,18 @@ def main():
 
     newModel = modelProbabilityDistributionOfLensedEquivalentWidths()
     newModel.setInterpolatorFunctionParamGrid()
-    newModel.fillParamGrid()
-    newModel.fitInterpolator(loadPklFile=False)
+    #newModel.fillParamGrid()
+    newModel.fitInterpolator(loadPklFile=True)
     
     predictAlphas = np.linspace(0.2,0.4, 8)
+    
     fig=plt.figure()
     gs = gridspec.GridSpec(5,1)
     ax1 = plt.subplot(gs[:3,0])
     ax2 = plt.subplot(gs[3:,0])
     fig.subplots_adjust(hspace=0)
     for iAlpha in predictAlphas:
-        predictThese = {'alpha':0.2, 'scale':iAlpha}
+        predictThese = {'alpha':iAlpha, 'scale':0.3}
         
         trueDist = newModel.getNewDistribution(predictThese)
 
@@ -35,13 +40,17 @@ def main():
 
         ax1.plot(trueDist['x'], predictedPDF['y'])
         
-        ax2.plot(trueDist['x'], predictedPDF['y']/(1+trueDist['y']))
+        ax2.plot(trueDist['x'], \
+            np.cumsum(predictedPDF['y'])/np.sum(predictedPDF['y']) - \
+            np.cumsum(trueDist['y'])/np.sum(trueDist['y']))
         
-    ax1.set_yscale('log')
-    ax2.set_yscale('log')
-    ax2.set_ylim(1e-4,1)
-    ax1.set_ylim(1e-4,3)
-        
+    #ax1.set_yscale('log')
+    #ax2.set_yscale('log')
+    ax2.set_ylim(-2e-3,2e-3)
+    ax1.set_ylim(1e-4,2.2)
+    ax1.set_xlim(-1,2.2)
+    ax2.set_xlim(-1,2.2)
+
     plt.show()
     
 class modelProbabilityDistributionOfLensedEquivalentWidths:
@@ -166,5 +175,38 @@ class modelProbabilityDistributionOfLensedEquivalentWidths:
             self.values = np.append(self.values, iPDF['y'])
 
         bar.finish()
+
+    def generateDistributionOfEquivalentWidths( self, inputParameters, nObservations):
+            '''
+            Generate a selection of equivalent widths, as predicted by this
+            model predictor for the given inputParams and the number of nObservations
+
+            inputParams : a dict of the input params
+            nObservations: an int of the nuymber of observations
+            '''
+
+            #gfenerate a vector of many possible EW for which i will get their
+            #probabilities (many so non get double selected) reality = inifite number of chocies
+            xVector = np.linspace(-3, 3, nObservations*100)
+            theoreticalPDF = \
+              self.predictPDFforParameterCombination(inputParameters, xVector=xVector)
+
+            probabilities = theoreticalPDF['y'] / np.sum(theoreticalPDF['y'])
+            selectedEquivalentWidths = \
+              np.random.choice( xVector,  size=nObservations,p=probabilities )
+
+            probabiltiyDistribution, x = \
+              np.histogram( selectedEquivalentWidths, \
+                bins=np.linspace(-3,3,nObservations/100), density=True)
+
+            binCenters = (x[1:] + x[:-1])/2.
+
+            pdf = {'x': binCenters, 'y':probabiltiyDistribution}
+
+            return pdf
+
+            
+            
+            
 if __name__ == '__main__':
     main()

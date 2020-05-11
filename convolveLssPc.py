@@ -35,7 +35,7 @@ def main(z=1.0, nMu=1000, nOmegaM=10):
     omegaMatterList = [0.19, 0.3, 0.43]
 
     for j, alpha in enumerate(alphaList):
-           #For aesthetics                                                         
+        #For aesthetics                                                         
         jet = cm = plt.get_cmap(colorMaps[j])
         cNorm  = colors.Normalize(vmin=-1, vmax=3+1)
         scalarMap = cmx.ScalarMappable(norm=cNorm, cmap=jet)
