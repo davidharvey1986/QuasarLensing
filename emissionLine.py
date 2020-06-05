@@ -376,7 +376,7 @@ class emissionLine:
           lensingPDF.convolvedPbhPdfWithLssPdf['x'] 
         #times the dEW / dKappa
         self.lensingPDF = lensingPDF.convolvedPbhPdfWithLssPdf['y']
-        self.alpha=lensingPDF.inputParams['alpha']
+        self.alpha = lensingPDF.inputParams['alpha']
 
         self.lensingEquivalentWidth = \
           self.lensingEquivalentWidth[ self.lensingPDF > 0] 

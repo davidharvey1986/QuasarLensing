@@ -19,8 +19,8 @@ def main():
 
     newModel = modelProbabilityDistributionOfLensedEquivalentWidths()
     newModel.setInterpolatorFunctionParamGrid()
-    #newModel.fillParamGrid()
-    newModel.fitInterpolator(loadPklFile=True)
+    newModel.fillParamGrid()
+    newModel.fitInterpolator()
     
     predictAlphas = np.linspace(0.2,0.4, 8)
     
@@ -30,7 +30,7 @@ def main():
     ax2 = plt.subplot(gs[3:,0])
     fig.subplots_adjust(hspace=0)
     for iAlpha in predictAlphas:
-        predictThese = {'alpha':iAlpha, 'scale':0.3}
+        predictThese = {'alpha':iAlpha, 'scale':0.3, 'redshift':1.0}
         
         trueDist = newModel.getNewDistribution(predictThese)
 
@@ -88,13 +88,14 @@ class modelProbabilityDistributionOfLensedEquivalentWidths:
 
         self.interpolateParams = { \
             'alpha': np.linspace(0.1,0.83, 100),
-            'scale' : np.linspace(0.2,0.5, 100)}
+            'scale' : np.linspace(0.2,0.5, 100),\
+            'redshift':np.linspace(0.5,3, 100) }
                 
         self.paramKeys = self.interpolateParams.keys()
 
     def fitInterpolator( self, loadPklFile=False ):
 
-        pklFile = 'pickles/interpolator.func'
+        pklFile = 'pickles/interpolatorWithRedshift.func'
         
         if loadPklFile:
             self.interpolatorFunction = \
