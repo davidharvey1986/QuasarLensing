@@ -1,5 +1,5 @@
 import numpy as np
-import pyfits as fits
+from astropy.io import fits
 import convolveLssPc as clp
 from scipy.stats import norm
 from scipy.stats import rayleigh

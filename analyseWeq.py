@@ -1,11 +1,10 @@
 from matplotlib import pyplot as plt
 from matplotlib import gridspec
 import numpy as np
-import pyfits as fits
 import lensing_parameters as lensing
 from emissionLine import *
 import sys
-
+from astropy.io import fits
 def exampleEquivalentWidthConvolutedWithLensingAndCompared():
     '''
     This example will take an emission line
