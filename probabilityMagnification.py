@@ -24,7 +24,7 @@ def getMeanMagOther(z, omegaM=0.31):
 
 
     eqn26 =np.exp(2.*tau)
-    print eqn26-1
+
     eqn28 = beta**(-2)*(np.sinh(0.25*beta*np.log(1.+z)))**2*\
       (np.sinh(0.25*np.log(1.+z)))**(-2)
       
@@ -156,7 +156,7 @@ def multiRedshiftPDF():
 
         mag, PDF, dMag = \
           getInversePDF( iRedshift )
-        print np.sum(PDF*dMag)
+
         iInvFLRWmeanMag = 1./(1.+getMeanMag(iRedshift))
         InvFLRWmeanMag.append( iInvFLRWmeanMag)
                                
@@ -200,7 +200,7 @@ def plotPBHpdf():
         mag, pdf = getPDF(z)
         pdf = np.append(0., pdf)
         mag = np.append(0., mag)
-        print mag[0]
+
         color = scalarMap.to_rgba(z)
         pdf/=np.max(pdf)
         ax.plot(mag-getMeanMag(z), pdf, color=color,label="z=%0.2f" % z, lw=2)

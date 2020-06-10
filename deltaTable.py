@@ -44,7 +44,7 @@ def getDelta( z=1.0, meanMag=None, omega_m=0.30, sigma_8=0.9):
     if meanMag is None:
         meanMag = pm.getMeanMag( z, omega_m=omega_m, sigma_8=sigma_8 )
 
-    deltaList, magnitudes, norm = pkl.load(open('deltaTable.pkl','rb'))
+    deltaList, magnitudes, norm = pkl.load(open('deltaTable.pkl','rb'), encoding='latin1') 
 
     logDeltaList = np.log10(deltaList)
     logMagnitudes = np.log10(magnitudes)
@@ -72,7 +72,7 @@ def generatePDFs():
 
     
     deltaList, MeanMagnitudes, norm = \
-      pkl.load(open('deltaTable.pkl','rb'))
+      pkl.load(open('deltaTable.pkl','rb'), encoding='latin1') 
 
     #mag, pdf =  pm.magPDF( deltaList[0] )
     #Genereate an array that is magnitude across and meanMag

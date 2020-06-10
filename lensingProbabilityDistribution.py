@@ -336,7 +336,7 @@ class lensingProbabilityDistribution():
         
         if os.path.isfile( self.pickleFileName ):
             
-            temp =  pkl.load( open( self.pickleFileName, 'rb'))
+            temp =  pkl.load( open( self.pickleFileName, 'rb'), encoding='latin1')
             self.__dict__.update(temp)
             
         self.boolPickleFileExists = \

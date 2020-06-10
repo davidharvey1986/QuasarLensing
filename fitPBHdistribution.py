@@ -55,7 +55,7 @@ class fittedPBHdistribution:
     def getInterpolateFunction( self ):
 
         interpolationData = np.zeros((len(self.trueDistributionsEquivWidths), len(self.trueDistributions.keys())))
-        print self.trueDistributions.keys()
+
         for iCount, iKey in enumerate(self.trueDistributions.keys()):
             interpolationData[:, iCount] = self.trueDistributions[iKey]
 

@@ -9,7 +9,7 @@ import pickle as pkl
 def lnProbOfDataGivenModel( theta, xTrue, yTrue,  modelPredictor ):
 
     #theta is a just a list, need to turn it in to a dict
-    thetaDict = {'alpha': theta[0], 'scale':theta[1]}
+    thetaDict = {'alpha': theta[0], 'scale':theta[1], 'redshift':theta[2]}
     theoreticalPrediction = modelPredictor.predictPDFforParameterCombination( thetaDict, xVector=xTrue)
 
     priorOnParameters = \
@@ -82,7 +82,7 @@ class fitEquivalentWidthDistribution:
         self.pdf = inputProbabliltyDistribution
         self.modelClass = modelClass
 
-    def fitProbabilityDistriubtion( self, nthreads=4, **kwargs):
+    def fitProbabilityDistribution( self, nthreads=4, **kwargs):
 
         ### options for the sampling
         nwalkers = 20

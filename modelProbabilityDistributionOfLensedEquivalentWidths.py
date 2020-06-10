@@ -5,21 +5,31 @@ import ipdb as pdb
 from itertools import product
 from scipy.interpolate import interpn
 from scipy.interpolate import NearestNDInterpolator
+from scipy.interpolate import LinearNDInterpolator
 import pickle as pkl
 from matplotlib import gridspec
 import progressbar
+from sklearn.linear_model import LinearRegression
 
 
-
+import os
 
 def main():
     '''
     Run some tests on this class, and show how the predictive works
     '''
-
+    print("Initiatilising")
     newModel = modelProbabilityDistributionOfLensedEquivalentWidths()
+    print("Setting Grid")
     newModel.setInterpolatorFunctionParamGrid()
-    newModel.fillParamGrid()
+    if os.path.isfile(newModel.paramGridFile):
+        newModel.loadParamGrid()
+    else:
+        print("Filling Grid")
+        newModel.fillParamGrid()
+        print("Saving param grid")
+        newModel.saveParamGrid()
+    print("Fitting interpolator")
     newModel.fitInterpolator()
     
     predictAlphas = np.linspace(0.2,0.4, 8)
@@ -54,14 +64,14 @@ def main():
     plt.show()
     
 class modelProbabilityDistributionOfLensedEquivalentWidths:
-    def __init__( self ):
+    def __init__( self, paramGridFile='pickles/paramGrid.pkl' ):
         '''
         This class is set up to learn the distriubtion
         of magnitudes for a given distribution and return
         the predicted probabilityh distribution
         for given parameters
             '''
-
+        self.paramGridFile = paramGridFile
         self.setDefaultDistriubtion()
 
     def setDefaultDistriubtion( self):
@@ -87,9 +97,9 @@ class modelProbabilityDistributionOfLensedEquivalentWidths:
     def setInterpolatorFunctionParamGrid( self ):
 
         self.interpolateParams = { \
-            'alpha': np.linspace(0.1,0.83, 100),
-            'scale' : np.linspace(0.2,0.5, 100),\
-            'redshift':np.linspace(0.5,3, 100) }
+            'alpha': np.linspace(0.1,0.83, 10),
+            'scale' : np.linspace(0.2,0.5, 10),\
+            'redshift':np.linspace(0.5,5, 10) }
                 
         self.paramKeys = self.interpolateParams.keys()
 
@@ -99,11 +109,12 @@ class modelProbabilityDistributionOfLensedEquivalentWidths:
         
         if loadPklFile:
             self.interpolatorFunction = \
-              pkl.load(open(pklFile,'rb'))
+              pkl.load(open(pklFile,'rb'), encoding='latin1') 
         else:
 
             self.interpolatorFunction = \
-              NearestNDInterpolator( self.points, self.values)
+              LinearNDInterpolator( self.points, self.values)
+              
             pkl.dump(self.interpolatorFunction, \
                         open(pklFile, 'wb'))
 
@@ -113,7 +124,7 @@ class modelProbabilityDistributionOfLensedEquivalentWidths:
         the correct order
         '''
         reOrderedParams = []
-        
+
         for iKey in self.paramKeys:
             reOrderedParams.append(inputParams[iKey])
 
@@ -176,35 +187,42 @@ class modelProbabilityDistributionOfLensedEquivalentWidths:
             self.values = np.append(self.values, iPDF['y'])
 
         bar.finish()
+        
+    def saveParamGrid( self):
+        paramGrid = [self.points, self.values]
+        pkl.dump(paramGrid, open(self.paramGridFile,'wb'))
 
+    def loadParamGrid( self):
+        self.points, self.values = pkl.load(open(self.paramGridFile,'rb'), encoding='latin1') 
+            
     def generateDistributionOfEquivalentWidths( self, inputParameters, nObservations):
-            '''
-            Generate a selection of equivalent widths, as predicted by this
-            model predictor for the given inputParams and the number of nObservations
+        '''
+        Generate a selection of equivalent widths, as predicted by this
+        model predictor for the given inputParams and the number of nObservations
 
-            inputParams : a dict of the input params
-            nObservations: an int of the nuymber of observations
-            '''
+        inputParams : a dict of the input params
+        nObservations: an int of the nuymber of observations
+        '''
 
-            #gfenerate a vector of many possible EW for which i will get their
-            #probabilities (many so non get double selected) reality = inifite number of chocies
-            xVector = np.linspace(-3, 3, nObservations*100)
-            theoreticalPDF = \
-              self.predictPDFforParameterCombination(inputParameters, xVector=xVector)
-
-            probabilities = theoreticalPDF['y'] / np.sum(theoreticalPDF['y'])
-            selectedEquivalentWidths = \
-              np.random.choice( xVector,  size=nObservations,p=probabilities )
-
-            probabiltiyDistribution, x = \
-              np.histogram( selectedEquivalentWidths, \
-                bins=np.linspace(-3,3,nObservations/100), density=True)
-
-            binCenters = (x[1:] + x[:-1])/2.
-
-            pdf = {'x': binCenters, 'y':probabiltiyDistribution}
-
-            return pdf
+        #gfenerate a vector of many possible EW for which i will get their
+        #probabilities (many so non get double selected) reality = inifite number of chocies
+        xVector = np.linspace(-3, 3, nObservations*100)
+        theoreticalPDF = \
+          self.predictPDFforParameterCombination(inputParameters, xVector=xVector)
+          
+        probabilities = theoreticalPDF['y'] / np.sum(theoreticalPDF['y'])
+        selectedEquivalentWidths = \
+          np.random.choice( xVector,  size=nObservations,p=probabilities )
+          
+        probabiltiyDistribution, x = \
+          np.histogram( selectedEquivalentWidths, \
+                    bins=np.linspace(-3,3,nObservations/100), density=True)
+                    
+        binCenters = (x[1:] + x[:-1])/2.
+                
+        pdf = {'x': binCenters, 'y':probabiltiyDistribution}
+            
+        return pdf
 
             
             

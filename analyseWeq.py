@@ -2,7 +2,7 @@ from matplotlib import pyplot as plt
 from matplotlib import gridspec
 import numpy as np
 import pyfits as fits
-import lensing as lensing
+import lensing_parameters as lensing
 from emissionLine import *
 import sys
 
@@ -164,14 +164,14 @@ def main( catalogue='dr9_weq.fits' ):
         
         if (not 'REW' in iKey) | ('ERR' in iKey):
             continue
-        print iKey
+
 
 
         
         zBin, weqBin = \
           redshiftBinWeq( data['Z_PIPE'], data[iKey])
         lineName = ' '.join(iKey.split('_')[1:3])
-        print data[iKey]
+
         angdist = lensing.ang_distance(zBin)
         ax.errorbar(zBin, weqBin[0,:], \
                         yerr=weqBin[1,:], label=lineName)
@@ -211,11 +211,11 @@ def compareCats():
         
 
         lineName = iKey.split('_')[1]
-        print lineName
+
         if (lineName == 'BROAD') | (lineName == 'NARROW'):
             lineName = iKey.split('_')[2]
         keyB = [ j for j in dataBKeys if (lineName in j) & ('REW' in j) & (not 'ERR' in j) & (not 'FPG' in j)]
-        print keyB, iKey
+
         if len(keyB) == 1:
           
           ax = axarr[iPlot]

@@ -240,7 +240,6 @@ class emissionLine:
             y = gauss( np.log10(x), *self.logNormalParameters[ iRedshiftBin ])
 
             ax = plt.gca()
-            print plottingParams['color']
             ax.plot(x,y, **plottingParams)
             
         
@@ -297,6 +296,7 @@ class emissionLine:
         #These have been derived from data
         self.intrinsicDistParams = \
           {'type':'LogNormal', 'mean':0.84, 'scale':0.3}
+          
         for iParam in intrinsicDistParams.keys():
             self.intrinsicDistParams[iParam] = \
               intrinsicDistParams[iParam]

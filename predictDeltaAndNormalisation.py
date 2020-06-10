@@ -53,7 +53,7 @@ def lossFunction( split, x, delta, norm ):
     '''
     My ansatz of how to go from mean magnitude to delta or the norm
     '''
-    print split
+
     yDelta = magnitude2param( x, delta, split[0])
     yNorm = magnitude2param( x, norm, split[1])
 
@@ -84,7 +84,7 @@ def predictNormAndDelta( ):
     deltaList, \
       magnitudes, \
       normList = getDeltaTable()
-    print np.max(deltaList)
+
     '''
     Used for linear deltatable
     index = np.floor(10**np.linspace(0,np.log10(len(magnitudesAll)-1),5000)).astype(int)

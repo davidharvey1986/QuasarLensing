@@ -56,7 +56,7 @@ def main(z=1.0, nMu=1000, nOmegaM=10):
                       label=r'$\Omega_m=%0.2f$, $\alpha=%0.2f$' % \
                           (omega_m, alpha))
                      
-        print lensingPDF.pdfMean
+
         plt.yscale('log')
         plt.ylim(0.05,130)
         plt.xlim(-0.3,0.3)
@@ -107,7 +107,7 @@ def diffLogLinear(z=1.0, nMu=1000):
                      logLensingPDF.convolvedPbhPdfWithLssPdf['y']-1,\
                      label='%0.2f' % alpha)
         
-        print lensingPDF.pdfMean - logLensingPDF.pdfMean
+
     mainAx.set_yscale('log')
     mainAx.set_xscale('log')
 
