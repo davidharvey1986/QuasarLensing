@@ -5,7 +5,7 @@ import numpy as np
 import ipdb as pdb
 import pickle as pkl
 import corner
-
+from matplotlib import pyplot as plt
 class getConstraintPredictions:
     '''
     This will genetate the predictions we will get from a samle of
@@ -29,6 +29,8 @@ class getConstraintPredictions:
         self.groundTruth = \
           getModel.modelProbabilityDistributionOfLensedEquivalentWidths()
         self.groundTruth.setInterpolatorFunctionParamGrid()
+        self.groundTruth.loadParamGrid()
+
         self.groundTruth.fitInterpolator(loadPklFile=True)
 
 
@@ -45,9 +47,10 @@ class getConstraintPredictions:
         '''
 
         self.listOfBootstrappedParams = []
-        for iBootStrap in xrange(self.nBootStraps):
-            samplesSaveFile = "%s_%i.pkl" % (self.pklRootName, iBootStrap)
-            iBootStrapParams = self.getSamplesForNumberOfObservations(samplesSaveFile=samplesSaveFile)
+        for iBootStrap in range(self.nBootStraps):
+            samplesSaveFile = "%s_%i.pkl" % (self.pklRootName, iBootStrap+1)
+            iBootStrapParams = \
+              self.getSamplesForNumberOfObservations(samplesSaveFile=samplesSaveFile)
             self.listOfBootstrappedParams.append( iBootStrapParams )
 
 

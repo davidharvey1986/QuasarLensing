@@ -10,27 +10,24 @@ import pickle as pkl
 from matplotlib import gridspec
 import progressbar
 from sklearn.linear_model import LinearRegression
-
-
+from sklearn.gaussian_process.kernels import  Matern
+from sklearn.decomposition import PCA
 import os
+from sklearn.gaussian_process import GaussianProcessRegressor
 
 def main():
     '''
     Run some tests on this class, and show how the predictive works
     '''
-    print("Initiatilising")
     newModel = modelProbabilityDistributionOfLensedEquivalentWidths()
-    print("Setting Grid")
     newModel.setInterpolatorFunctionParamGrid()
     if os.path.isfile(newModel.paramGridFile):
         newModel.loadParamGrid()
     else:
-        print("Filling Grid")
         newModel.fillParamGrid()
-        print("Saving param grid")
         newModel.saveParamGrid()
-    print("Fitting interpolator")
-    newModel.fitInterpolator()
+
+    newModel.fitInterpolator(loadPklFile=True)
     
     predictAlphas = np.linspace(0.2,0.4, 8)
     
@@ -64,16 +61,29 @@ def main():
     plt.show()
     
 class modelProbabilityDistributionOfLensedEquivalentWidths:
-    def __init__( self, paramGridFile='pickles/paramGrid.pkl' ):
+    
+    def __init__( self, paramGridFile='pickles/paramGrid.pkl', \
+                    nPrincipalComponents=10 ,\
+                    regressorNoiseLevel=1e-3):
         '''
         This class is set up to learn the distriubtion
         of magnitudes for a given distribution and return
         the predicted probabilityh distribution
         for given parameters
-            '''
+
+        To do this it
+        1. Generates a parameter grid and determines the PDF for PBH and
+           each point in that parameter grid
+        2. Then compresses these PDFs using a PCA
+        3. The learns the PCAs with a Gaussian Processor
+        
+        '''
+        print("Initiatilising Class")
+
         self.paramGridFile = paramGridFile
         self.setDefaultDistribution()
-
+        self.nPrincipalComponents = nPrincipalComponents
+        self.regressorNoiseLevel = regressorNoiseLevel
     def setDefaultDistribution( self):
         self.emissionLineCl = emissionLine('NARROW_HB', nRedshiftBins=2 )
         
@@ -82,6 +92,8 @@ class modelProbabilityDistributionOfLensedEquivalentWidths:
         self.emissionLineCl.setIntrinsicDistribution( )
 
         self.emissionLineCl.convolveIntrinsicEquivalentWidthWithLensingProbability()
+        self.interpolateToTheseEqWidth = \
+          self.emissionLineCl.predictedLensedEquivalentWidthDistribution['x']
 
     def getNewDistribution( self, inputParams={}):
 
@@ -95,6 +107,7 @@ class modelProbabilityDistributionOfLensedEquivalentWidths:
 
 
     def setInterpolatorFunctionParamGrid( self ):
+        print("Setting Parameter Grid")
 
         self.interpolateParams = { \
             'alpha': np.linspace(0.1,0.83, 10),
@@ -105,32 +118,52 @@ class modelProbabilityDistributionOfLensedEquivalentWidths:
 
     def fitInterpolator( self, loadPklFile=False ):
 
+     
         pklFile = 'pickles/interpolatorWithRedshift.func'
         
+        self.compressPDFwithPCA()
+
         if loadPklFile:
-            self.interpolatorFunction = \
+            print("Loading Gaussian Processor")
+            self.predictor = \
               pkl.load(open(pklFile,'rb'), encoding='latin1') 
         else:
-            pdb.set_trace()
-            self.interpolatorFunction = \
-              LinearNDInterpolator( self.points, self.values)
-              
-            pkl.dump(self.interpolatorFunction, \
-                        open(pklFile, 'wb'))
+            self.learnPrincipalComponents()             
+            pkl.dump(self.predictor, open(pklFile, 'wb'))
 
-    def compressPDFwithPCA( self, nPrincipalComponents=10 ):
+    def compressPDFwithPCA( self ):
         '''
-        Loop through each PDF and compress it to a set of principal
-        components
+        Compress all the PDFs use PCA analysis
+
         '''
-        self.compressedPCAfeatures = np.zeros(
+        print("Compressing PDFs with a PCA")
+        self.pca = PCA(n_components=self.nPrincipalComponents)
+        self.pca.fit( self.targetPDF )
+        self.principalComponents = \
+          self.pca.transform( self.targetPDF )
+          
+    def learnPrincipalComponents( self, length_scale=1., nu=3./2.):
+        '''
+        Using a mixture of Gaussian Processes 
+        predict the distributions of compoentns
+        It will return a list of nPrincipalComponent models that try to
+        learn each component to the data
+        '''
+        print("Learning PCAs with Gaussian Processor")
+        self.predictor = []
 
+        kernel =  Matern(length_scale=length_scale, nu=nu)
+       
+        for i in range(self.nPrincipalComponents):
+            print("Fitting Component %i/%i" % (i, self.nPrincipalComponents))
+            gaussProcess = \
+              GaussianProcessRegressor( alpha=self.regressorNoiseLevel, kernel=kernel,\
+                                            n_restarts_optimizer=10)
 
+            gaussProcess.fit(self.features, self.principalComponents[:,i])
 
-        
-
-
-
+                
+            self.predictor.append(gaussProcess)
         
     def predictPDFforParameterCombination( self, inputParams, xVector=None):
         '''
@@ -141,23 +174,42 @@ class modelProbabilityDistributionOfLensedEquivalentWidths:
 
         for iKey in self.paramKeys:
             reOrderedParams.append(inputParams[iKey])
-
+        reOrderedParams = np.array(reOrderedParams)
+        
         if xVector is None:
             xVector = \
               self.emissionLineCl.predictedLensedEquivalentWidthDistribution['x']
+              
+
+        predictedComponents = \
+          np.zeros(self.nPrincipalComponents)
+
+        for iComponent in range(self.nPrincipalComponents):
+            #there are now many preditors for the subsamples
+            #So the predictor for this subsample is
+            predictor = self.predictor[iComponent]
+
+
+            predictedComponents[iComponent] = \
+              predictor.predict(reOrderedParams.reshape(1,-1))
+
             
-        predict = [ np.append(i,np.array(reOrderedParams)) \
-                        for i in xVector ]
+        predictedTransformCDF =  \
+          self.pca.inverse_transform( predictedComponents)
+
+        if xVector is not None:
+            pdfDict = \
+              {'x': self.interpolateToTheseEqWidth, \
+               'y':predictedTransformCDF}
+            finalPDF =  \
+              self.interpolatePDF(pdfDict, xVector=xVector)
+        else:
+            xVector = self.interpolateToTheseEqWidth
+            finalPDF = predictedTransformCDF
 
 
-        predictedPDF = \
-          self.interpolatorFunction( predict )
-
-        pdf = {'x':xVector, 'y': predictedPDF}
-        
-        return pdf
-    
-
+        finalPDF[ finalPDF < 0 ] = 0
+        return {'x': xVector, 'y':finalPDF}
         
         
         
@@ -167,7 +219,8 @@ class modelProbabilityDistributionOfLensedEquivalentWidths:
         points : the value of the parameter combineation (equivWidth, alpha, scale) for ecample
         values: the y value at eac of these parameter combinations
         '''
-      
+        print("Filling Parameter Grid")
+
 
         nParamCombos = np.prod([ len(self.interpolateParams[i]) \
                     for i in self.paramKeys])
@@ -178,9 +231,9 @@ class modelProbabilityDistributionOfLensedEquivalentWidths:
           [ list(self.interpolateParams[i]) for \
                 i in self.paramKeys]
 
-        self.points = []
-        self.values = np.array([])
-
+        self.targetPDF = None 
+        self.features = None 
+          
         bar = progressbar.ProgressBar(maxval=nParamCombos, \
             widgets=[progressbar.Bar('=', '[', ']'), ' ', \
                          progressbar.Percentage()])
@@ -197,18 +250,34 @@ class modelProbabilityDistributionOfLensedEquivalentWidths:
                 inputParams[iKey] = iParamCombination[iParam]
 
             iPDF = self.getNewDistribution(inputParams)
-            self.points = self.points + \
-              [ np.append(i,np.array(iParamCombination)) for i in iPDF['x'] ]
-            self.values = np.append(self.values, iPDF['y'])
 
+            interpolatedPDF = self.interpolatePDF( iPDF )
+
+            if self.targetPDF is None:
+                self.features = iParamCombination
+                self.targetPDF = interpolatedPDF
+            else:
+                self.features = np.vstack((self.features, iParamCombination))
+                self.targetPDF = np.vstack((self.targetPDF, interpolatedPDF))
+
+                
         bar.finish()
+    def interpolatePDF(self, pdfDict, xVector=None):
+        '''
+        interpolte the input pdf to the x values
+        '''
+        if xVector is None:
+            xVector = self.interpolateToTheseEqWidth
+        return np.interp( xVector,pdfDict['x'], pdfDict['y'])
+        
         
     def saveParamGrid( self):
-        paramGrid = [self.points, self.values]
+        paramGrid = [self.features, self.targetPDF]
         pkl.dump(paramGrid, open(self.paramGridFile,'wb'))
 
     def loadParamGrid( self):
-        self.points, self.values = pkl.load(open(self.paramGridFile,'rb'), encoding='latin1') 
+        self.features, self.targetPDF =\
+          pkl.load(open(self.paramGridFile,'rb'), encoding='latin1') 
             
     def generateDistributionOfEquivalentWidths( self, inputParameters, nObservations):
         '''
@@ -226,6 +295,7 @@ class modelProbabilityDistributionOfLensedEquivalentWidths:
           self.predictPDFforParameterCombination(inputParameters, xVector=xVector)
           
         probabilities = theoreticalPDF['y'] / np.sum(theoreticalPDF['y'])
+
         selectedEquivalentWidths = \
           np.random.choice( xVector,  size=nObservations,p=probabilities )
           
