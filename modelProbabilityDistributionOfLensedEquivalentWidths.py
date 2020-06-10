@@ -72,9 +72,9 @@ class modelProbabilityDistributionOfLensedEquivalentWidths:
         for given parameters
             '''
         self.paramGridFile = paramGridFile
-        self.setDefaultDistriubtion()
+        self.setDefaultDistribution()
 
-    def setDefaultDistriubtion( self):
+    def setDefaultDistribution( self):
         self.emissionLineCl = emissionLine('NARROW_HB', nRedshiftBins=2 )
         
         self.emissionLineCl.setLensingProbability( )
@@ -111,13 +111,27 @@ class modelProbabilityDistributionOfLensedEquivalentWidths:
             self.interpolatorFunction = \
               pkl.load(open(pklFile,'rb'), encoding='latin1') 
         else:
-
+            pdb.set_trace()
             self.interpolatorFunction = \
               LinearNDInterpolator( self.points, self.values)
               
             pkl.dump(self.interpolatorFunction, \
                         open(pklFile, 'wb'))
 
+    def compressPDFwithPCA( self, nPrincipalComponents=10 ):
+        '''
+        Loop through each PDF and compress it to a set of principal
+        components
+        '''
+        self.compressedPCAfeatures = np.zeros(
+
+
+
+        
+
+
+
+        
     def predictPDFforParameterCombination( self, inputParams, xVector=None):
         '''
         inputParams needs to be a dict so i can ensure i put them in 
@@ -172,6 +186,7 @@ class modelProbabilityDistributionOfLensedEquivalentWidths:
                          progressbar.Percentage()])
         bar.start()
 
+        
         for progress, iParamCombination in enumerate(product(*listsOfParams)):
 
             bar.update(progress+1)
