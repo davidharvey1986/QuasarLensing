@@ -4,39 +4,58 @@ import ipdb as pdb
 import emcee
 import numpy as np
 from scipy.stats import norm
-
+from matplotlib import pyplot as plt 
 import pickle as pkl
-def lnProbOfDataGivenModel( theta, xTrue, yTrue,  modelPredictor ):
-
+def lnProbOfDataGivenModel( theta, pdfDict, modelPredictor ):
+    '''
+    yError in this case is teh error in the cumulative sum
+    '''
     #theta is a just a list, need to turn it in to a dict
-    thetaDict = {'alpha': theta[0], 'scale':theta[1], 'redshift':theta[2]}
-    theoreticalPrediction = modelPredictor.predictPDFforParameterCombination( thetaDict, xVector=xTrue)
+   
+    posterior = 0
+    for iRedshiftBin in pdfDict.keys():
+        thetaDict = {'alpha': theta[0], 'scale':theta[1], 'redshift':iRedshiftBin}
 
-    priorOnParameters = \
-      getPriorOnParameters( theta, modelPredictor )
+        xTrue = pdfDict[iRedshiftBin]['x']
+        yTrue = pdfDict[iRedshiftBin]['y']
+        yError = pdfDict[iRedshiftBin]['error']
+        
+        theoreticalPrediction = modelPredictor.predictPDFforParameterCombination( thetaDict, xVector=xTrue)
 
-    cumsumTheory = np.cumsum(theoreticalPrediction['y'])
-    cumsumTrue = np.cumsum(yTrue)
-    
-    likelihood = 1./np.sum( (cumsumTheory - cumsumTrue)**2)*len(cumsumTrue)
-    
-    posterior = priorOnParameters*likelihood
-    #pdb.set_trace()
+        priorOnParameters = getPriorOnParameters( thetaDict, modelPredictor )
+
+        cumsumTheory = np.cumsum(theoreticalPrediction['y'])/np.sum(theoreticalPrediction['y'])
+        cumsumTrue = np.cumsum(yTrue)/np.sum(yTrue)
+
+        #for the uneven error bars
+        upperIndex = (cumsumTrue >= cumsumTheory) & (yError[1] != 0)
+        likelihoodUpper = norm.logpdf( cumsumTheory[upperIndex], \
+                    cumsumTrue[upperIndex], scale=yError[1][upperIndex])
+                    
+        lowerIndex = (cumsumTrue < cumsumTheory) & (yError[0] != 0)
+        likelihoodLower = norm.logpdf( cumsumTheory[lowerIndex], \
+                        cumsumTrue[lowerIndex], scale=yError[0][lowerIndex])
+
+        likelihood = np.nansum(likelihoodUpper) + np.nansum(likelihoodLower)
+
+        posterior += priorOnParameters*likelihood
+
+
     if np.isfinite(posterior) == False:
         posterior = -np.inf
     return posterior
 
 
-def getPriorOnParameters( theta, modelPredictor):
+def getPriorOnParameters( thetaDict, modelPredictor):
     '''
     For now the prior is just a flat one within the bounds
     of the trained interpolator
     '''
-    thetaDict = {'alpha': theta[0], 'scale':theta[1]}
 
     prior = 1
     
     for iKey in thetaDict.keys():
+        
 
         minParam = \
           np.min(modelPredictor.interpolateParams[iKey])
@@ -81,26 +100,27 @@ class fitEquivalentWidthDistribution:
                    
         self.pdf = inputProbabliltyDistribution
         self.modelClass = modelClass
-
+      
     def fitProbabilityDistribution( self, nthreads=4, **kwargs):
 
         ### options for the sampling
         nwalkers = 20
-        ndim = len(self.modelClass.interpolateParams.keys())
-        burn_len=100
-        chain_len=2000
+        ndim = len(self.modelClass.interpolateParams.keys())-1
+        burn_len=1000
+        chain_len=10000
         #####
         #initial set up of samplers
         pos0 = np.zeros((nwalkers,ndim))
-    
+
         for iPos, iDim in \
           enumerate(self.modelClass.interpolateParams.keys()):
-            pos0[:,iPos] = \
+          if iDim == 'redshift':
+            continue
+          pos0[:,iPos] = \
               np.random.uniform(self.modelClass.interpolateParams[iDim][0],\
                                 self.modelClass.interpolateParams[iDim][-1], nwalkers)
        
-        args = (self.pdf['x'], self.pdf['y'], \
-             self.modelClass )
+        args = (self.pdf, self.modelClass )
 
         dmsampler = \
           emcee.EnsembleSampler(nwalkers, ndim, \

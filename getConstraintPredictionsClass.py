@@ -11,19 +11,17 @@ class getConstraintPredictions:
     This will genetate the predictions we will get from a samle of
     observed quasars
     '''
-    def __init__( self, inputParams, nObservations, pklRootName, \
-                    nBootStraps=5):
+    def __init__( self, inputParams, nObservations, pklRootName ):
 
         #The number of simualted observed quasars
         self.nObservations = nObservations
-        #The number of bootstraps that i will carr out
-        #to get the covariance
-        self.nBootStraps = nBootStraps
         #The ground truth
         self.inputParameters = inputParams
-        self.nParameters = len(self.inputParameters.keys())
+        self.nParameters = \
+          len([i for i in self.inputParameters.keys() if not 'red' in i]) 
         #pklRootName for the saved samples
         self.pklRootName = '%s_%i' % (pklRootName,nObservations)
+        self.samplesSaveFile = '%s.pkl' % self.pklRootName
         
     def getGroundTruthDistribution( self ):
         self.groundTruth = \
@@ -36,33 +34,22 @@ class getConstraintPredictions:
 
         #Get an input model from the trainer (in future change this to a true
         #model)
-        self.groundTruthDist = \
-          self.groundTruth.predictPDFforParameterCombination(self.inputParameters)
+        self.groundTruthDist = {}
+        for iRedshiftBin in self.inputParameters['redshiftBins']:
+            self.inputParameters['redshift'] = iRedshiftBin
+            self.groundTruthDist[iRedshiftBin] = \
+              self.groundTruth.predictPDFforParameterCombination(self.inputParameters)
 
         
-    def bootStrapSamplingForCovariance(self ):
-        '''
-        Loop over getSamplesForNumberOfObservations, nBootStrap times
-        and get the distribution of estimated parameters
-        '''
-
-        self.listOfBootstrappedParams = []
-        for iBootStrap in range(self.nBootStraps):
-            samplesSaveFile = "%s_%i.pkl" % (self.pklRootName, iBootStrap+1)
-            iBootStrapParams = \
-              self.getSamplesForNumberOfObservations(samplesSaveFile=samplesSaveFile)
-            self.listOfBootstrappedParams.append( iBootStrapParams )
-
-
-    def getSamplesForNumberOfObservations( self, samplesSaveFile=None, verifyDistribution=False ):
+    def getSamplesForNumberOfObservations( self, verifyDistribution=False ):
         '''
         For a given number of observations, create a mock pdf and 
         sample from this to see what the constraints could be
         '''
-        if os.path.isfile(samplesSaveFile):
-            samples = pkl.load(open(samplesSaveFile, 'rb'))
-            params = self.getParamsFromSamples(samples, statType='median')
-            return params
+        
+        if os.path.isfile(self.samplesSaveFile):
+            samples = pkl.load(open(self.samplesSaveFile, 'rb'))
+            return samples
        
         #so the posteior was a delta function on the truth so
         #add some noise by putting in a sampled for a given
@@ -84,29 +71,34 @@ class getConstraintPredictions:
         fitModelClass = \
           fitEquivalentWidthDistribution( observedSampledDist, self.groundTruth)
         fitModelClass.fitProbabilityDistribution()
-        fitModelClass.saveSamples(samplesSaveFile)
-
-        return fitModelClass.params
+        fitModelClass.saveSamples(self.samplesSaveFile)
 
     def getParamsFromSamples( self, samples, statType='median'):
         #And work out some simple statistics (need to add maxLike)
-        errorLower, median, errorUpper = \
-          np.percentile(samples, [16, 50, 84], axis=0)
+        if statType == 'median':
+            errorLower, median, errorUpper = \
+              np.percentile(samples, [16, 50, 84], axis=0)
 
-        error = np.mean([median - errorLower, errorUpper - median], axis=0)
+            error = np.mean([median - errorLower, errorUpper - median], axis=0)
 
-        return {'params':median, 'error':error}
+            return {'params':median, 'error':error}
+        elif statType == 'maxLike':
+            errorLower, median, errorUpper = \
+              np.percentile(samples, [16, 50, 84], axis=0)
+            error = np.mean([median - errorLower, errorUpper - median], axis=0)
+
+            maxLike = []
+            for iPar in range(samples.shape[1]):
+                y, x = np.histogram( samples[:, iPar], bins=50)
+                xc = (x[:-1] + x[1:])/2.
+                maxLike.append(xc[ np.argmax( y) ])
+
+            return {'params':np.array(maxLike), 'error':error}    
 
 
-    def reformBootStrappedParamsForCorner( self ):
-
-        self.bestFitParams = np.zeros((self.nBootStraps,self.nParameters))
-        for thisParamSet, iParamSet in enumerate(self.listOfBootstrappedParams):
-            
-            self.bestFitParams[thisParamSet, :] = iParamSet['params']
-
-    def plotBootStrappedResults( self, figcorner=None, color='red' ):
-
+    def plotBootStrappedResults( self,  figcorner=None, color='red', **kwargs ):
+        
+        samples = pkl.load(open(self.samplesSaveFile, 'rb'))
 
         if figcorner is None:
             figcorner, axarr = \
@@ -115,15 +107,15 @@ class getConstraintPredictions:
         truths = [self.inputParameters[i] for i in self.inputParameters.keys()]
         labels = [i for i in self.inputParameters.keys()]
         
-        nsamples = self.nBootStraps
-        
-        corner.corner( self.bestFitParams, truths=truths, labels=labels, \
+        nsamples = samples.shape[0]
+
+        corner.corner( samples, truths=truths, labels=labels, \
                 fig=figcorner, color=color, \
-                smooth=True, levels=(0.20,), plot_datapoints=False,\
+                smooth=True, plot_datapoints=False,\
                 weights=np.ones(nsamples)/nsamples,\
                 hist_kwargs={'linewidth':2.},\
                 contour_kwargs={'linewidths':2.},\
-                bins=20)
+                bins=20, **kwargs)
                            
 if __name__ == '__main__':
     main()

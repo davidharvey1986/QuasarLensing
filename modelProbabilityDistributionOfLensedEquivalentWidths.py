@@ -170,10 +170,11 @@ class modelProbabilityDistributionOfLensedEquivalentWidths:
         inputParams needs to be a dict so i can ensure i put them in 
         the correct order
         '''
+        allPDfdict = {}
         reOrderedParams = []
-
         for iKey in self.paramKeys:
             reOrderedParams.append(inputParams[iKey])
+            
         reOrderedParams = np.array(reOrderedParams)
         
         if xVector is None:
@@ -194,22 +195,22 @@ class modelProbabilityDistributionOfLensedEquivalentWidths:
               predictor.predict(reOrderedParams.reshape(1,-1))
 
             
-        predictedTransformCDF =  \
+        predictedTransformCDF = \
           self.pca.inverse_transform( predictedComponents)
 
         if xVector is not None:
             pdfDict = \
-              {'x': self.interpolateToTheseEqWidth, \
-               'y':predictedTransformCDF}
+                  {'x': self.interpolateToTheseEqWidth, \
+                       'y':predictedTransformCDF}
             finalPDF =  \
-              self.interpolatePDF(pdfDict, xVector=xVector)
+                  self.interpolatePDF(pdfDict, xVector=xVector)
         else:
             xVector = self.interpolateToTheseEqWidth
             finalPDF = predictedTransformCDF
 
 
         finalPDF[ finalPDF < 0 ] = 0
-        return {'x': xVector, 'y':finalPDF}
+        return  {'x': xVector, 'y':finalPDF}
         
         
         
@@ -279,7 +280,9 @@ class modelProbabilityDistributionOfLensedEquivalentWidths:
         self.features, self.targetPDF =\
           pkl.load(open(self.paramGridFile,'rb'), encoding='latin1') 
             
-    def generateDistributionOfEquivalentWidths( self, inputParameters, nObservations):
+    def generateDistributionOfEquivalentWidths( self, inputParameters, \
+                                                    nObservationsPerRedshiftBin,\
+                                                    getError=True):
         '''
         Generate a selection of equivalent widths, as predicted by this
         model predictor for the given inputParams and the number of nObservations
@@ -287,28 +290,74 @@ class modelProbabilityDistributionOfLensedEquivalentWidths:
         inputParams : a dict of the input params
         nObservations: an int of the nuymber of observations
         '''
+        allPDFdict = {}
+        
+        for iRedshiftBin in inputParameters['redshiftBins']:
+            inputParameters['redshift'] = iRedshiftBin
+            #gfenerate a vector of many possible EW for which i will get their
+            #probabilities (many so non get double selected) reality = inifite number of chocies
+            xVector = np.linspace(-3, 3, nObservationsPerRedshiftBin*100)
+            theoreticalPDF = \
+              self.predictPDFforParameterCombination(inputParameters, xVector=xVector)
 
-        #gfenerate a vector of many possible EW for which i will get their
-        #probabilities (many so non get double selected) reality = inifite number of chocies
-        xVector = np.linspace(-3, 3, nObservations*100)
-        theoreticalPDF = \
-          self.predictPDFforParameterCombination(inputParameters, xVector=xVector)
-          
-        probabilities = theoreticalPDF['y'] / np.sum(theoreticalPDF['y'])
-
-        selectedEquivalentWidths = \
-          np.random.choice( xVector,  size=nObservations,p=probabilities )
-          
-        probabiltiyDistribution, x = \
-          np.histogram( selectedEquivalentWidths, \
-                    bins=np.linspace(-3,3,nObservations/100), density=True)
-                    
-        binCenters = (x[1:] + x[:-1])/2.
-                
-        pdf = {'x': binCenters, 'y':probabiltiyDistribution}
             
-        return pdf
+            probabilities = theoreticalPDF['y'] / np.sum(theoreticalPDF['y'])
 
+            selectedEquivalentWidths = \
+              np.random.choice( xVector,  size=nObservationsPerRedshiftBin,p=probabilities )
+          
+            probabiltiyDistribution, x = \
+              np.histogram( selectedEquivalentWidths, \
+                    bins=np.linspace(-3,3,nObservationsPerRedshiftBin/10), density=True)
+                    
+            binCenters = (x[1:] + x[:-1])/2.
+            if getError:
+                error = \
+                  self.generateVarianceInCumSumSample( inputParameters, nObservationsPerRedshiftBin )
+                
+                truth = self.predictPDFforParameterCombination(inputParameters, \
+                                                               xVector=binCenters)
+                error[0][ error[0] < 1e-10 ]  = 0.
+                error[1][ error[1] < 1e-10 ]  = 0.
+
+                pdf = {'x': binCenters, 'y':truth['y'], 'error':error}
+            else:
+                pdf = {'x': binCenters, 'y':probabiltiyDistribution}
+
+            allPDFdict[iRedshiftBin] = pdf
+        
+        return allPDFdict
+
+    def generateVarianceInCumSumSample( self,inputParameters, \
+                        nObservations, nBootStraps=100):
+        '''
+        loop nBootStrap times and find the variance in each bin
+        '''
+
+        
+        variance = None
+        for iBootStrap in range(nBootStraps):
+            inputParameters['redshiftBins'] = [inputParameters['redshift']]
+            
+            iStrappePDFDict = \
+              self.generateDistributionOfEquivalentWidths( inputParameters, \
+                                                nObservations, getError=False)
+            iStrappePDF = iStrappePDFDict[inputParameters['redshift']]
+            cumsum =  np.cumsum(iStrappePDF['y'])/np.sum(iStrappePDF['y'])
+            if variance is None:
+                variance =cumsum
+            else:
+                variance = np.vstack((variance,cumsum))
+                
+
+        median, lower, upper =  \
+          np.percentile( variance, [50, 16,84], axis=0)
+
+        return median - lower, upper-median
+                
+                
+                                                            
+            
             
             
             
