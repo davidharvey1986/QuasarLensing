@@ -76,7 +76,7 @@ def getPriorOnParameters( thetaDict, modelPredictor):
 
 class fitEquivalentWidthDistribution:
 
-    def __init__( self, inputProbabliltyDistribution, modelClass ):
+    def __init__( self, inputProbabliltyDistribution, modelClass, fittingParams = {} ):
 
           
         '''
@@ -97,17 +97,20 @@ class fitEquivalentWidthDistribution:
            "modelProbabilityDistributionfOfLensedEquivalentWidths.py"
 
         '''
-                   
+        self.fittingParams = {'chain_len':10000, 'burn_len':1000, 'nWalkers':20}
+        for iParam in fittingParams.keys():
+            self.fittingParams[iParam] = fittingParams[iParam]
+            
         self.pdf = inputProbabliltyDistribution
         self.modelClass = modelClass
       
     def fitProbabilityDistribution( self, nthreads=4, **kwargs):
 
         ### options for the sampling
-        nwalkers = 20
+        nwalkers = self.fittingParams['nWalkers']
         ndim = len(self.modelClass.interpolateParams.keys())-1
-        burn_len=1000
-        chain_len=10000
+        burn_len= self.fittingParams['burn_len']
+        chain_len=self.fittingParams['chain_len']
         #####
         #initial set up of samplers
         pos0 = np.zeros((nwalkers,ndim))
@@ -141,7 +144,10 @@ class fitEquivalentWidthDistribution:
 
         #Get the samples of the chain
         self.samples = dmsampler.flatchain
-
+        self.getParams( )
+        
+    def getParams( self ):
+        
         #And work out some simple statistics
         errorLower, median, errorUpper = \
           np.percentile(self.samples, [16, 50, 84], axis=0)

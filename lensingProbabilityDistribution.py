@@ -64,7 +64,8 @@ class lensingProbabilityDistribution():
         self.getMeanMagnitude()
 
         if  self.inputParams['alpha'] < 0.08:
-            raise ValueError("Alpha is too small, valid only >= 0.08")
+            print("WARNING Alpha is small, valid only >= 0.08")
+            #raise ValueError("Alpha is too small, valid only >= 0.08")
         
         #to be changed to include redshift dependence:
         self.getProbabilityLensingByLss()

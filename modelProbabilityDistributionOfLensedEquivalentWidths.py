@@ -15,50 +15,6 @@ from sklearn.decomposition import PCA
 import os
 from sklearn.gaussian_process import GaussianProcessRegressor
 
-def main():
-    '''
-    Run some tests on this class, and show how the predictive works
-    '''
-    newModel = modelProbabilityDistributionOfLensedEquivalentWidths()
-    newModel.setInterpolatorFunctionParamGrid()
-    if os.path.isfile(newModel.paramGridFile):
-        newModel.loadParamGrid()
-    else:
-        newModel.fillParamGrid()
-        newModel.saveParamGrid()
-
-    newModel.fitInterpolator(loadPklFile=True)
-    
-    predictAlphas = np.linspace(0.2,0.4, 8)
-    
-    fig=plt.figure()
-    gs = gridspec.GridSpec(5,1)
-    ax1 = plt.subplot(gs[:3,0])
-    ax2 = plt.subplot(gs[3:,0])
-    fig.subplots_adjust(hspace=0)
-    for iAlpha in predictAlphas:
-        predictThese = {'alpha':iAlpha, 'scale':0.3, 'redshift':1.0}
-        
-        trueDist = newModel.getNewDistribution(predictThese)
-
-        predictedPDF = \
-          newModel.predictPDFforParameterCombination(predictThese, \
-                                    xVector=trueDist['x'] )
-
-        ax1.plot(trueDist['x'], predictedPDF['y'])
-        
-        ax2.plot(trueDist['x'], \
-            np.cumsum(predictedPDF['y'])/np.sum(predictedPDF['y']) - \
-            np.cumsum(trueDist['y'])/np.sum(trueDist['y']))
-        
-    #ax1.set_yscale('log')
-    #ax2.set_yscale('log')
-    ax2.set_ylim(-2e-3,2e-3)
-    ax1.set_ylim(1e-4,2.2)
-    ax1.set_xlim(-1,2.2)
-    ax2.set_xlim(-1,2.2)
-
-    plt.show()
     
 class modelProbabilityDistributionOfLensedEquivalentWidths:
     
@@ -97,29 +53,36 @@ class modelProbabilityDistributionOfLensedEquivalentWidths:
 
     def getNewDistribution( self, inputParams={}):
 
+
+            
         self.emissionLineCl.setLensingProbability( **inputParams )
         
         self.emissionLineCl.setIntrinsicDistribution(**inputParams)
         
-        self.emissionLineCl.convolveIntrinsicEquivalentWidthWithLensingProbability()
+        if inputParams['alpha'] == 0:
+            return self.emissionLineCl.intrinsicEquivalentWidthDistribution
+        else:
+            self.emissionLineCl.convolveIntrinsicEquivalentWidthWithLensingProbability()
 
-        return self.emissionLineCl.predictedLensedEquivalentWidthDistribution
+            return self.emissionLineCl.predictedLensedEquivalentWidthDistribution
 
 
     def setInterpolatorFunctionParamGrid( self ):
         print("Setting Parameter Grid")
+        #Alpha seems to be well behaved to 0.2
 
+        alpha = np.append(0., np.linspace(0.2,0.83, 10))
         self.interpolateParams = { \
-            'alpha': np.linspace(0.1,0.83, 10),
+            'alpha': alpha,
             'scale' : np.linspace(0.2,0.5, 10),\
             'redshift':np.linspace(0.5,5, 10) }
                 
         self.paramKeys = self.interpolateParams.keys()
 
-    def fitInterpolator( self, loadPklFile=False ):
+    def fitInterpolator( self, loadPklFile=False, pklFile=None ):
 
-     
-        pklFile = 'pickles/interpolatorWithRedshift.func'
+        if pklFile is None:
+            pklFile = 'pickles/interpolatorWithRedshift.func'
         
         self.compressPDFwithPCA()
 
@@ -210,6 +173,11 @@ class modelProbabilityDistributionOfLensedEquivalentWidths:
 
 
         finalPDF[ finalPDF < 0 ] = 0
+
+        #Now re-normalise
+        dX = xVector[1] - xVector[0]
+        finalPDF = finalPDF/(np.sum(finalPDF)*dX)
+        
         return  {'x': xVector, 'y':finalPDF}
         
         
@@ -291,7 +259,7 @@ class modelProbabilityDistributionOfLensedEquivalentWidths:
         nObservations: an int of the nuymber of observations
         '''
         allPDFdict = {}
-        
+        totalNumberOfQuasars = 0
         for iRedshiftBin in inputParameters['redshiftBins']:
             inputParameters['redshift'] = iRedshiftBin
             #gfenerate a vector of many possible EW for which i will get their
@@ -305,11 +273,11 @@ class modelProbabilityDistributionOfLensedEquivalentWidths:
 
             selectedEquivalentWidths = \
               np.random.choice( xVector,  size=nObservationsPerRedshiftBin,p=probabilities )
-          
+            totalNumberOfQuasars += nObservationsPerRedshiftBin
             probabiltiyDistribution, x = \
               np.histogram( selectedEquivalentWidths, \
                     bins=np.linspace(-3,3,nObservationsPerRedshiftBin/10), density=True)
-                    
+            
             binCenters = (x[1:] + x[:-1])/2.
             if getError:
                 error = \
@@ -325,7 +293,7 @@ class modelProbabilityDistributionOfLensedEquivalentWidths:
                 pdf = {'x': binCenters, 'y':probabiltiyDistribution}
 
             allPDFdict[iRedshiftBin] = pdf
-        
+
         return allPDFdict
 
     def generateVarianceInCumSumSample( self,inputParameters, \
@@ -359,7 +327,4 @@ class modelProbabilityDistributionOfLensedEquivalentWidths:
                                                             
             
             
-            
-            
-if __name__ == '__main__':
-    main()
+    

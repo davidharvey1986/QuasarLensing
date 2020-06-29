@@ -447,7 +447,10 @@ class emissionLine:
 
     def predictProbability( self, equivalentWidth, alpha):
         return self.fittedDist.predictDistribution(equivalentWidth, alpha)
-        
+
+
+
+    
 def gauss(x, *p):
     A, mu, sigma = p
     return A*np.exp(-(x-mu)**2/(2.*sigma**2))

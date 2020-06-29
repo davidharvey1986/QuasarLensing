@@ -22,6 +22,10 @@ class getConstraintPredictions:
         #pklRootName for the saved samples
         self.pklRootName = '%s_%i' % (pklRootName,nObservations)
         self.samplesSaveFile = '%s.pkl' % self.pklRootName
+
+    def checkForSampleFile( self ):
+        return os.path.isfile(self.samplesSaveFile)
+            
         
     def getGroundTruthDistribution( self ):
         self.groundTruth = \
@@ -41,11 +45,17 @@ class getConstraintPredictions:
               self.groundTruth.predictPDFforParameterCombination(self.inputParameters)
 
         
-    def getSamplesForNumberOfObservations( self, verifyDistribution=False ):
+    def getSamplesForNumberOfObservations( self, verifyDistribution=False, fittingParams={} ):
         '''
         For a given number of observations, create a mock pdf and 
         sample from this to see what the constraints could be
         '''
+
+        self.fittingParams = {'chain_len':10000, 'burn_len':1000, 'nWalkers':20}
+
+        for iParam in fittingParams.keys():
+            self.fittingParams[iParam] = fittingParams[iParam]
+            
         
         if os.path.isfile(self.samplesSaveFile):
             samples = pkl.load(open(self.samplesSaveFile, 'rb'))
@@ -69,7 +79,7 @@ class getConstraintPredictions:
             plt.show()
         
         fitModelClass = \
-          fitEquivalentWidthDistribution( observedSampledDist, self.groundTruth)
+          fitEquivalentWidthDistribution( observedSampledDist, self.groundTruth, fittingParams=fittingParams)
         fitModelClass.fitProbabilityDistribution()
         fitModelClass.saveSamples(self.samplesSaveFile)
 
@@ -115,7 +125,18 @@ class getConstraintPredictions:
                 weights=np.ones(nsamples)/nsamples,\
                 hist_kwargs={'linewidth':2.},\
                 contour_kwargs={'linewidths':2.},\
-                bins=20, **kwargs)
-                           
+                bins=20, levels=(0.68,0.950),  **kwargs)
+
+    def getBestFitParams( self ):
+        samples = pkl.load(open(self.samplesSaveFile, 'rb'))
+
+        #And work out some simple statistics
+        errorLower, median, errorUpper = \
+          np.percentile(samples, [16, 50, 84], axis=0)
+
+        error = np.mean([median - errorLower, errorUpper - median], axis=0)
+
+        return  {'params':median, 'error':error}
+        
 if __name__ == '__main__':
     main()

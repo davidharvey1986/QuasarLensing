@@ -138,7 +138,7 @@ def predictNormAndDelta( ):
 def getNormAndDeltaForMagnitude( magnitudes ):
 
     split, paramsDeltalo, paramsDeltaHi, paramsNormLo, paramsNormHi = \
-      pkl.load(open('getNormDeltaParams.pkl','rb'))
+      pkl.load(open('getNormDeltaParams.pkl','rb'), encoding='latin1')
 
     norm = getParams( magnitudes, split[1], paramsNormLo, paramsNormHi)
     delta = getParams( magnitudes, split[0], paramsDeltalo, paramsDeltaHi)
