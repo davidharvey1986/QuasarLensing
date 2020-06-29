@@ -20,7 +20,7 @@ class modelProbabilityDistributionOfLensedEquivalentWidths:
     
     def __init__( self, paramGridFile='pickles/paramGrid.pkl', \
                     nPrincipalComponents=10 ,\
-                    regressorNoiseLevel=1e-3):
+                    regressorNoiseLevel=1e-5):
         '''
         This class is set up to learn the distriubtion
         of magnitudes for a given distribution and return
@@ -157,10 +157,11 @@ class modelProbabilityDistributionOfLensedEquivalentWidths:
             predictedComponents[iComponent] = \
               predictor.predict(reOrderedParams.reshape(1,-1))
 
-            
+
         predictedTransformCDF = \
           self.pca.inverse_transform( predictedComponents)
 
+        
         if xVector is not None:
             pdfDict = \
                   {'x': self.interpolateToTheseEqWidth, \
@@ -172,12 +173,13 @@ class modelProbabilityDistributionOfLensedEquivalentWidths:
             finalPDF = predictedTransformCDF
 
 
-        finalPDF[ finalPDF < 0 ] = 0
+        #finalPDF[ finalPDF < 0 ] = 0
 
         #Now re-normalise
+        finalPDF = 10**finalPDF
         dX = xVector[1] - xVector[0]
         finalPDF = finalPDF/(np.sum(finalPDF)*dX)
-        
+
         return  {'x': xVector, 'y':finalPDF}
         
         

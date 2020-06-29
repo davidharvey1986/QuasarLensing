@@ -16,11 +16,13 @@ def main():
     else:
         newModel.fillParamGrid()
         newModel.saveParamGrid()
-    newModel.targetPDF[newModel.targetPDF==0] = 1e-80
+
+    newModel.targetPDF[ newModel.targetPDF <= 1e-5] = 1e-5
     newModel.targetPDF = np.log10(newModel.targetPDF)
     
-    newModel.fitInterpolator(loadPklFile=False, \
-                pklFile='pickles/logInterplator.pkl')
+    
+    newModel.fitInterpolator(loadPklFile=True, \
+                pklFile='pickles/logInterpolator.pkl')
     
     predictAlphas = np.linspace(0.2,0.4, 8)
     
@@ -37,14 +39,13 @@ def main():
         predictedPDF = \
           newModel.predictPDFforParameterCombination(predictThese, \
                                     xVector=trueDist['x'] )
-
         ax1.plot(trueDist['x'], predictedPDF['y'])
         
         ax2.plot(trueDist['x'], \
             np.cumsum(predictedPDF['y'])/np.sum(predictedPDF['y']) - \
             np.cumsum(trueDist['y'])/np.sum(trueDist['y']))
         
-    #ax1.set_yscale('log')
+    ax1.set_yscale('log')
     #ax2.set_yscale('log')
     ax2.set_ylim(-2e-3,2e-3)
     ax1.set_ylim(1e-4,2.2)
@@ -66,11 +67,13 @@ def extrapolationToLowAlpha(nAlphas=10):
     else:
         newModel.fillParamGrid()
         newModel.saveParamGrid()
-
-    newModel.fitInterpolator(loadPklFile=True)
+    newModel.targetPDF[ newModel.targetPDF <= 1e-5] = 1e-5
+    newModel.targetPDF = np.log10(newModel.targetPDF)
+    newModel.fitInterpolator(loadPklFile=True, \
+                pklFile='pickles/logInterpolator.pkl')
 
     cRange = colourFromRange( [0, nAlphas], 'rainbow')
-    predictAlphas = np.linspace(0.01,0.83, nAlphas)
+    predictAlphas = np.linspace(0.0,0.2, nAlphas)
 
     fig=plt.figure()
     gs = gridspec.GridSpec(5,1)
@@ -85,17 +88,16 @@ def extrapolationToLowAlpha(nAlphas=10):
         predictedPDF = \
           newModel.predictPDFforParameterCombination(predictThese, \
                                     xVector=trueDist['x'] )
-
-                                
+                                    
         label=r'$\alpha=%0.2f$' % iAlpha
-        ax1.plot(trueDist['x'], trueDist['y'], '-', \
-                     color=cRange.getColour(iColour), label=label)
+        #ax1.plot(trueDist['x'], trueDist['y'], '-', \
+        #             color=cRange.getColour(iColour))
         ax1.plot(trueDist['x'], predictedPDF['y'], '--',\
-                     color=cRange.getColour(iColour), label=label)
+                     color=cRange.getColour(iColour))
 
-        ax2.plot(trueDist['x'], \
-            np.cumsum(predictedPDF['y'])/np.sum(predictedPDF['y']) - \
-            np.cumsum(trueDist['y'])/np.sum(trueDist['y']))
+        if iAlpha > 0.2:
+            ax2.plot(trueDist['x'], (predictedPDF['y']-trueDist['y'])/trueDist['y'],\
+                     color=cRange.getColour(iColour))
         
     ax1.set_yscale('log')
     ax1.legend()
@@ -108,4 +110,4 @@ def extrapolationToLowAlpha(nAlphas=10):
     plt.show()
                    
 if __name__ == '__main__':
-    main()
+    extrapolationToLowAlpha()
